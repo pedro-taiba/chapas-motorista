@@ -73,6 +73,8 @@ header::after{
 header.rolado::after{opacity:1}
 h1{font-size:1.15rem;font-weight:600;letter-spacing:-.015em;line-height:1.2}
 header .sub{font-size:.8rem;color:var(--muted);padding-bottom:2px}
+.wrap>header{flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center}
+.wrap>header h1{font-size:1.25rem}
 
 
 /* ---------- boas-vindas e instalar ---------- */
@@ -445,7 +447,7 @@ footer{text-align:center;font-size:.72rem;color:var(--muted);padding:10px 10px 0
   <header>
     <h1>Chapas &amp; Vencimento</h1>
     <button type="button" class="btn-instalar" id="btnInstalarTopo" hidden>Instalar app</button>
-    <span class="sub" id="subTopo">Escala e vencimento do motorista</span>
+    <span id="subTopo" hidden></span>
   </header>
 
   <div class="pane" id="pane-chapa" role="tabpanel" aria-labelledby="tab-chapa">
@@ -2295,12 +2297,12 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
   const btnTopo = $('btnInstalarTopo'), btnBv = $('bvInstalar');
   function mostrarInstalar(){
     if (instalada) return;
-    if (pedido || ios){ btnTopo.hidden = false; $('subTopo').hidden = true; btnBv.hidden = !pedido; $('bvIos').hidden = !(ios && !pedido); }
+    if (pedido || ios){ btnTopo.hidden = false;  btnBv.hidden = !pedido; $('bvIos').hidden = !(ios && !pedido); }
   }
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pedido = e; mostrarInstalar(); });
-  window.addEventListener('appinstalled', () => { btnTopo.hidden = true; btnBv.hidden = true; $('subTopo').hidden = false; toast('App instalada'); });
+  window.addEventListener('appinstalled', () => { btnTopo.hidden = true; btnBv.hidden = true;  toast('App instalada'); });
   async function instalar(){
-    if (pedido){ pedido.prompt(); try { await pedido.userChoice; } catch(e){} pedido = null; btnTopo.hidden = true; btnBv.hidden = true; $('subTopo').hidden = false; }
+    if (pedido){ pedido.prompt(); try { await pedido.userChoice; } catch(e){} pedido = null; btnTopo.hidden = true; btnBv.hidden = true;  }
     else if (ios) toast('Toque em Partilhar e depois em Adicionar ao ecrã principal');
   }
   btnTopo.addEventListener('click', instalar);
