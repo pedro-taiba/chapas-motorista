@@ -871,7 +871,7 @@ const RUB_TAXA = RUBRICAS.filter(r => r.taxa !== false);
 const taxaMostrada = id => familia(id) === 'descanso' ? cfg[id.endsWith('N') ? 'descComplN' : 'descComplD'] : cfg[id];
 const nomeRubrica = id => id === 'normal' ? 'Serviço normal' : (RUBRICAS.find(r => r.id === id) || {nome:'—'}).nome;
 
-const CFG_DEFAULT = {versao:5, irsAuto:true, irsTabela:'I', dependentes:0, taxasAuto:true, refeicaoAuto:true, janelaAlmoco:'11:00 – 14:00', janelaJantar:'18:00 – 21:00', limiteDescanso:11, vencBase:0, horasSemana:40, subsidio:7.20, noturno:1.70, refPen:7.45, limiteDiario:8, splitExtra:true, ss:11, irs:0, outros:0, subIsento:true};
+const CFG_DEFAULT = {versao:5, irsAuto:true, irsTabela:'I', dependentes:0, taxasAuto:true, refeicaoAuto:true, janelaAlmoco:'11:00 – 14:00', janelaJantar:'18:00 – 21:00', limiteDescanso:11, vencBase:1178.49, horasSemana:40, subsidio:7.20, noturno:1.70, refPen:7.45, limiteDiario:8, splitExtra:true, ss:11, irs:0, outros:0, subIsento:true};
 RUBRICAS.forEach(r => CFG_DEFAULT[r.id] = r.def);
 
 const K_CFG = 'chapas-config', K_REG = 'chapas-registos', K_TS = 'chapas-guardado', K_MINHAS = 'chapas-minhas';
