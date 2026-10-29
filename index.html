@@ -102,6 +102,11 @@ header .sub{font-size:.8rem;color:var(--muted);padding-bottom:2px}
   border:1px solid var(--credit-line);background:var(--brand-deep);color:var(--credit);cursor:pointer;white-space:nowrap}
 .inst-ios{margin-top:4px;padding:12px;border-radius:var(--r);background:var(--night);color:var(--night-ink);font-size:.82rem}
 
+[hidden]{display:none!important}
+.dlg-fundo{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:20px}
+.dlg{width:100%;max-width:360px;background:var(--panel);border:1px solid var(--rule-strong);border-radius:var(--r-lg);padding:18px;display:flex;flex-direction:column;gap:16px}
+.dlg p{font-size:.92rem;line-height:1.5;white-space:pre-line}
+.dlg-bts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 /* ---------- painéis ---------- */
 .card{background:var(--panel);border:1px solid var(--rule);border-radius:var(--r-lg);padding:18px 16px}
 .card h2{font-size:.95rem;font-weight:600;letter-spacing:-.01em;margin-bottom:14px}
@@ -237,7 +242,12 @@ label.fld{display:block;font-size:.78rem;color:var(--muted);margin-bottom:5px}
 .total .val{font-size:1.65rem;font-weight:600;letter-spacing:-.02em;color:var(--credit)}
 .save{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:16px}
 .escala-card{margin-top:12px}
-.escala-add{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,.8fr) auto;gap:8px;margin-top:4px}
+.escala-add{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:8px;margin-top:4px}
+.escala-add .btn{width:100%}
+.tag-esc{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;font-size:.7rem;font-weight:600;background:var(--brand-deep);color:var(--credit)}
+.tag-esc.ok{background:var(--panel-sunk);color:var(--muted)}
+.copia-aviso{margin-top:14px;padding:12px;border-radius:var(--r);background:var(--night);color:var(--night-ink);font-size:.8rem;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.copia-aviso .btn{padding:8px 12px;font-size:.8rem}
 .escala-lista{margin-top:12px}
 .escala-lista .x{background:none;border:0;color:var(--muted);font-size:1.2rem;padding:4px 8px;cursor:pointer}
 .escala-lista .lrow.passado{opacity:.45}
@@ -454,6 +464,10 @@ footer{text-align:center;font-size:.72rem;color:var(--muted);padding:10px 10px 0
     <small>Valores calculados a partir do vencimento base de 1.178,49 €. Pode mudar em Ajustes.</small>
   </div>
 </div>
+<div class="dlg-fundo" id="dlgConf" hidden role="dialog" aria-modal="true" aria-labelledby="dlgConfTxt">
+  <div class="dlg"><p id="dlgConfTxt"></p>
+    <div class="dlg-bts"><button type="button" class="btn btn-quiet" id="dlgConfNao">Cancelar</button><button type="button" class="btn" id="dlgConfSim">Confirmar</button></div></div>
+</div>
 <div class="wrap">
 
   <header>
@@ -615,6 +629,7 @@ footer{text-align:center;font-size:.72rem;color:var(--muted);padding:10px 10px 0
       <div class="stat"><div class="k">Horas noturnas</div><div class="v" id="mNoite">0h 00m</div></div>
       <div class="stat"><div class="k">Horas acima das 8h</div><div class="v" id="mExtra">0h 00m</div></div>
     </div>
+    <div class="copia-aviso" id="avisoCopia" hidden><span></span><button class="btn" type="button" id="btnCopiaJa">Guardar cópia</button></div>
     <div class="liquido" id="liquido"></div>
     <div class="liquido recibo" id="recibo"></div>
     <div class="desatual" id="desatual" hidden>
@@ -635,9 +650,14 @@ footer{text-align:center;font-size:.72rem;color:var(--muted);padding:10px 10px 0
     <div class="escala-add">
       <input type="date" id="escData" aria-label="Dia">
       <input type="text" id="escChapa" inputmode="numeric" list="chapaList" placeholder="Chapa" aria-label="Número da chapa" autocomplete="off">
+      <select id="escTipo" aria-label="Tipo de dia">
+        <option value="normal">Dia normal</option>
+        <option value="folgaVendD">Folga vendida</option>
+        <option value="feriadoD">Feriado</option>
+      </select>
       <button class="btn" id="escAdd" type="button">Adicionar</button>
     </div>
-    <p class="note">Depois de adicionar, o dia avança sozinho para o seguinte. Nas folgas, avance o dia sem adicionar.</p>
+    <p class="note">Ponha a escala do mês de uma vez. Cada dia fica <b>registado sozinho</b> quando passa, com as horas e o valor já calculados. Nas folgas, avance o dia sem adicionar.</p>
     <div class="escala-lista" id="escLista"></div>
     <div class="escala-avisos">
       <select id="escAntes" aria-label="Quanto tempo antes">
@@ -1211,6 +1231,7 @@ async function guardarFicheiro(nome, dados, tipo){
   return true;
 }
 async function exportar(){
+  try { localStorage.setItem('chapas-ultima-copia', String(Date.now())); } catch(e){}
   const txt = pacote();
   if (window.claude){
     if (await guardarFicheiro(nomeFicheiro(), txt, 'application/json')) toast('Cópia guardada');
@@ -1475,7 +1496,7 @@ async function receberFicheiros(lista){
 async function apagarCarregadas(){
   const n = ['util','sabado','domingo'].reduce((s,t) => s + Object.keys(minhas[t] || {}).length, 0);
   if (!n) return;
-  if (!confirm(`Apagar as ${n} chapas carregadas e voltar às originais da app?`)) return;
+  if (!await confirmar(`Apagar as ${n} chapas carregadas e voltar às originais da app?`)) return;
   minhas = minhasVazias();
   await gravarMinhas();
   fundirMinhas();
@@ -1946,12 +1967,12 @@ function dadosDoAviso(){
   const alarme = `Chapa ${atual.chapa} começa às ${hIni}` + (carreiras ? `. Carreiras: ${carreiras}` : '');
   return {data, ini, fim, antes, titulo, desc, alarme};
 }
-function confirmarPassado(a){
+async function confirmarPassado(a){
   if (a.ini > new Date()) return true;
-  return confirm(`A chapa ${atual.chapa} em ${a.data.split('-').reverse().join('/')} já começou. Criar o aviso mesmo assim?`);
+  return confirmar(`A chapa ${atual.chapa} em ${a.data.split('-').reverse().join('/')} já começou. Criar o aviso mesmo assim?`);
 }
-function criarAviso(){
-  const a = dadosDoAviso(); if (!a || !confirmarPassado(a)) return;
+async function criarAviso(){
+  const a = dadosDoAviso(); if (!a || !await confirmarPassado(a)) return;
   Store.escrever(K_AVISO, String(a.antes));
   const linhas = [
     'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Chapas//Aviso//PT','CALSCALE:GREGORIAN','METHOD:PUBLISH',
@@ -1986,8 +2007,8 @@ function criarAviso(){
   }
   toast(`Aviso ${a.antes} min antes das ${fmtHora(atual.s1.a)}. Abra o ficheiro para guardar`);
 }
-function avisoGoogle(){
-  const a = dadosDoAviso(); if (!a || !confirmarPassado(a)) return;
+async function avisoGoogle(){
+  const a = dadosDoAviso(); if (!a || !await confirmarPassado(a)) return;
   const q = new URLSearchParams({
     action:'TEMPLATE', text:a.titulo,
     dates:`${icsUTC(a.ini)}/${icsUTC(a.fim)}`,
@@ -2030,7 +2051,7 @@ function pintarEscala(){
       ? `Não existe em ${NOME_DIA[x.tipo].toLowerCase()} na escala carregada`
       : `${fmtHora(x.ini)}–${fmtHora(x.fim)}${x.carreiras ? ', ' + x.carreiras : ''}`;
     return `<div class="lrow${e.data < hoje ? ' passado' : ''}${x.erro ? ' erro' : ''}">
-      <div><b>${nomeData(e.data)}</b> · Chapa ${e.chapa}<small class="lrow-det">${det}</small></div>
+      <div><b>${nomeData(e.data)}</b> · Chapa ${e.chapa}${e.rub && e.rub !== 'normal' ? `<span class="tag-esc">${e.rub === 'folgaVendD' ? 'Folga vendida' : 'Feriado'}</span>` : ''}${registos.some(r => r.data === e.data) ? '<span class="tag-esc ok">registado</span>' : ''}<small class="lrow-det">${det}</small></div>
       <button class="x" type="button" data-i="${i}" aria-label="Tirar ${nomeData(e.data)}">×</button></div>`;
   }).join('') : '<p class="empty" style="margin:0">Ainda não tem dias na escala.</p>';
 }
@@ -2047,11 +2068,54 @@ async function adicionarEscala(){
     toast(`A chapa ${chapa} não existe em ${NOME_DIA[tipo].toLowerCase()}`); return;
   }
   escala = escala.filter(e => e.data !== data);
-  escala.push({data, chapa});
+  escala.push({data, chapa, rub: $('escTipo').value || 'normal'});
+  $('escTipo').value = 'normal';
   await gravarEscala();
   pintarEscala();
   $('escData').value = diaSeguinte(data);
   $('escChapa').value = ''; $('escChapa').focus();
+}
+/* Regista sozinho os dias da escala que já passaram e ainda não estão no mês */
+function registarDaEscala(e){
+  const tipo = tipoDiaDaData(e.data);
+  if (!dadosChapas[tipo][e.chapa]) return false;
+  diaSel = tipo;
+  document.querySelectorAll('.days button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.dia === tipo)));
+  $('chapaInput').value = e.chapa;
+  consultar();
+  if (!atual) return false;
+  let rub = e.rub || 'normal';
+  if (rub !== 'normal' && atual.noite > atual.minutos/2 && PAR_NOITE[rub]) rub = PAR_NOITE[rub];
+  $('rubricaSelect').value = rub;
+  recalcular();
+  const d = detalhe();
+  registos.push({
+    id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
+    data: e.data, chapa: atual.chapa, dia: atual.dia,
+    minutos: d.rep.total, noite: d.rep.noiteTotal, avulsas: d.rep.av,
+    minExtra: d.rep.extra, noiteExtra: d.rep.extraNoite, noiteExtra1: d.rep.extraNoite1,
+    ini: atual.s1.a, fim: (atual.temP2 ? atual.s2.b : atual.s1.b) + d.rep.av,
+    rubrica: d.rub, valor: d.total, taxas: taxasDoMomento(), gravadoEm: new Date().toISOString(),
+    auto: true,
+    opc: {sub: $('ckSub').checked, noite: $('ckNoite').checked && atual.noite > 0, ref: $('ckRefPen').checked}
+  });
+  return true;
+}
+async function autoRegistarEscala(){
+  const hoje = isoLocal(new Date());
+  const falta = escala.filter(e => e.data < hoje && !e.ignorar && !registos.some(r => r.data === e.data));
+  if (!falta.length) return;
+  const antes = {dia: diaSel, chapa: $('chapaInput').value};
+  let n = 0;
+  falta.forEach(e => { if (registarDaEscala(e)) n++; });
+  // volta a deixar o ecrã da chapa como estava
+  diaSel = antes.dia;
+  document.querySelectorAll('.days button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.dia === diaSel)));
+  $('chapaInput').value = antes.chapa; atual = null; $('result').hidden = true;
+  if (!n) return;
+  await gravarReg();
+  pintarMes(); pintarEscala();
+  toast(`${n} ${n === 1 ? 'dia da escala registado' : 'dias da escala registados'} sozinho${n === 1 ? '' : 's'}`);
 }
 async function criarAvisosEscala(){
   const agora = new Date();
@@ -2125,21 +2189,21 @@ async function entrarConta(criar){
   setTimeout(() => location.reload(), 600);   // recarrega já a ler da nuvem (e sobe o que estava no telemóvel)
 }
 async function sairConta(){
-  if (!confirm('Sair da conta? Os dados continuam guardados online.')) return;
+  if (!await confirmar('Sair da conta? Os dados continuam guardados online.')) return;
   try { await Store.supa.auth.signOut(); } catch(e){}
   location.reload();
 }
-function registar(){
+async function registar(){
   if (!atual) return;
   const data = $('dataTrabalho').value;
   if (!data){ toast('Escolha a data em que trabalhou'); return; }
 
   const esperado = tipoDiaDaData(data);
   if (esperado !== atual.dia){
-    if (!confirm(`Atenção: ${data.split('-').reverse().join('/')} é ${NOME_DIA[esperado].toLowerCase()}, mas a chapa ${atual.chapa} é de ${NOME_DIA[atual.dia].toLowerCase()}.\n\nGuardar mesmo assim?`)) return;
+    if (!await confirmar(`Atenção: ${data.split('-').reverse().join('/')} é ${NOME_DIA[esperado].toLowerCase()}, mas a chapa ${atual.chapa} é de ${NOME_DIA[atual.dia].toLowerCase()}.\n\nGuardar mesmo assim?`)) return;
   }
   if (registos.some(r => r.data === data && r.chapa === atual.chapa)){
-    if (!confirm(`Já tem a chapa ${atual.chapa} registada nesse dia. Guardar outra vez?`)) return;
+    if (!await confirmar(`Já tem a chapa ${atual.chapa} registada nesse dia. Guardar outra vez?`)) return;
   }
 
   const d = detalhe();
@@ -2159,8 +2223,16 @@ function registar(){
   if (tabMes) tabMes.click();
   toast(`Chapa ${atual.chapa} registada, ${eur(d.total)}`);
 }
+/* um dia apagado à mão não volta a ser registado sozinho a partir da escala */
+function marcarEscalaIgnorada(datas){
+  let mudou = false;
+  escala.forEach(e => { if (datas.includes(e.data) && !e.ignorar){ e.ignorar = true; mudou = true; } });
+  if (mudou) gravarEscala();
+}
 function remover(id){
+  const r0 = registos.find(r => r.id === id);
   registos = registos.filter(r => r.id !== id);
+  if (r0) marcarEscalaIgnorada([r0.data]);
   gravarReg(); pintarMes();
 }
 function mudarMes(passo){
@@ -2249,6 +2321,7 @@ function pintarMes(){
     : `vencimento de ${prox} + extras feitos em ${este}`;
   pintarDesatualizados(doMes);
   pintarRecibo(doMes, red);
+  pintarAvisoCopia();
 
   const semana = ['dom','seg','ter','qua','qui','sex','sáb'];
   $('entries').innerHTML = doMes.map(r => {
@@ -2266,6 +2339,17 @@ function pintarMes(){
     </div>`;
   }).join('');
   $('mEmpty').hidden = doMes.length > 0;
+}
+/* Lembrete para guardar cópia quando os dados só existem neste telemóvel */
+function pintarAvisoCopia(){
+  const el = $('avisoCopia'); if (!el) return;
+  let ult = 0; try { ult = Number(localStorage.getItem('chapas-ultima-copia')) || 0; } catch(e){}
+  const soLocal = Store.modo === 'local';
+  const dias = (Date.now() - ult) / 864e5;
+  el.hidden = !(soLocal && registos.length >= 3 && dias > 30);
+  if (!el.hidden) el.querySelector('span').textContent = ult
+    ? `A última cópia tem ${Math.floor(dias)} dias. Guarde outra para não perder os seus registos.`
+    : 'Os seus registos estão só neste telemóvel. Guarde uma cópia para não os perder.';
 }
 /* Quadro do mês com as mesmas linhas do recibo, para conferir */
 function pintarRecibo(doMes, red){
@@ -2339,6 +2423,19 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
 }
 
 
+/* Confirmação dentro da própria página (a janela de confirmação do navegador não funciona em todo o lado) */
+function confirmar(msg, sim){
+  return new Promise(res => {
+    const d = $('dlgConf');
+    $('dlgConfTxt').textContent = msg;
+    $('dlgConfSim').textContent = sim || 'Confirmar';
+    d.hidden = false;
+    const fim = v => { d.hidden = true; $('dlgConfSim').onclick = $('dlgConfNao').onclick = null; res(v); };
+    $('dlgConfSim').onclick = () => fim(true);
+    $('dlgConfNao').onclick = () => fim(false);
+    $('dlgConfSim').focus();
+  });
+}
 /* ============ BOAS-VINDAS E INSTALAR ============ */
 (function(){
   const LS = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
@@ -2404,7 +2501,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
   $('btnAtualizar').addEventListener('click', async () => {
     const ids = ($('desatual').dataset.ids || '').split(',').filter(Boolean);
     if (!ids.length) return;
-    if (!confirm(`Recalcular ${ids.length} ${ids.length === 1 ? 'registo' : 'registos'} com os valores que tem agora?\n\nOs valores originais perdem-se.`)) return;
+    if (!await confirmar(`Recalcular ${ids.length} ${ids.length === 1 ? 'registo' : 'registos'} com os valores que tem agora?\n\nOs valores originais perdem-se.`)) return;
     registos.forEach(r => {
       if (!ids.includes(r.id)) return;
       const v = valorRecalculado(r);
@@ -2430,6 +2527,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
   $('btnApagarCarregadas').addEventListener('click', apagarCarregadas);
 
   $('btnExportar').addEventListener('click', exportar);
+  $('btnCopiaJa').addEventListener('click', async () => { await exportar(); pintarAvisoCopia(); });
   $('btnImportar').addEventListener('click', () => $('fileImport').click());
   $('fileImport').addEventListener('change', e => {
     const f = e.target.files && e.target.files[0];
@@ -2441,7 +2539,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
     e.target.value = '';
   });
   $('btnApagarTudo').addEventListener('click', async () => {
-    if (!confirm('Apagar todos os registos e voltar aos valores de origem? Isto não se desfaz.')) return;
+    if (!await confirmar('Apagar todos os registos e voltar aos valores de origem? Isto não se desfaz.')) return;
     registos = [];
     cfg = {...CFG_DEFAULT};
     await Store.apagar(K_REG); await Store.apagar(K_CFG); await Store.apagar(K_TS);
@@ -2526,6 +2624,8 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
   await carregarEscala();
   $('escData').value = isoLocal(new Date());
   pintarEscala();
+  await autoRegistarEscala();
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) autoRegistarEscala(); });
   $('escAdd').addEventListener('click', adicionarEscala);
   $('escChapa').addEventListener('keydown', e => { if (e.key === 'Enter') adicionarEscala(); });
   $('escAvisos').addEventListener('click', criarAvisosEscala);
@@ -2539,10 +2639,11 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
   $('mesPrev').addEventListener('click', () => mudarMes(-1));
   $('mesNext').addEventListener('click', () => mudarMes(1));
   $('btnCopiar').addEventListener('click', copiarResumo);
-  $('btnLimpar').addEventListener('click', () => {
+  $('btnLimpar').addEventListener('click', async () => {
     const n = registos.filter(r => r.data.startsWith(mesSel)).length;
     if (!n){ toast('Este mês está vazio'); return; }
-    if (confirm(`Apagar os ${n} registo(s) de ${$('mesNome').textContent}?`)){
+    if (await confirmar(`Apagar os ${n} registo(s) de ${$('mesNome').textContent}?`)){
+      marcarEscalaIgnorada(registos.filter(r => r.data.startsWith(mesSel)).map(r => r.data));
       registos = registos.filter(r => !r.data.startsWith(mesSel));
       gravarReg(); pintarMes(); toast('Mês limpo');
     }
