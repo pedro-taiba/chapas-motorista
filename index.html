@@ -274,7 +274,9 @@ label.fld{display:block;font-size:.78rem;color:var(--muted);margin-bottom:5px}
 .stat .v{font-size:1.05rem;font-weight:600;margin-top:2px}
 .stat.wide{grid-column:1/-1;background:var(--brand-deep);color:#FFFFFF}
 .stat.wide .k{color:rgba(255,255,255,.72)}
-.stat.wide .v{font-size:1.45rem;font-weight:600;letter-spacing:-.02em}
+.stat.wide{padding:16px 14px}
+.stat.wide .v{font-size:2.1rem;font-weight:600;letter-spacing:-.025em;line-height:1.15;margin-top:4px}
+.stat.wide .k-foot b{color:#fff;font-weight:600}
 .stat .k-foot{margin-top:5px;opacity:.85}
 .grid2-top{margin-top:8px}
 .stat.sub{grid-column:1/-1;background:var(--panel-sunk);font-size:.8rem;color:var(--muted);padding:9px 12px}
@@ -603,15 +605,15 @@ footer{text-align:center;font-size:.72rem;color:var(--muted);padding:10px 10px 0
       </div>
     </div>
     <div class="stats">
-      <div class="stat"><div class="k">Dias trabalhados</div><div class="v" id="mDias">0</div></div>
-      <div class="stat"><div class="k">Tempo de serviço</div><div class="v" id="mHoras">0h 00m</div></div>
-      <div class="stat"><div class="k">Horas noturnas</div><div class="v" id="mNoite">0h 00m</div></div>
-      <div class="stat"><div class="k">Horas acima das 8h</div><div class="v" id="mExtra">0h 00m</div></div>
       <div class="stat wide">
         <div class="k">A receber este mês (aproximado)</div>
         <div class="v" id="mValor">0,00 €</div>
         <div class="k k-foot" id="mComBase"></div>
       </div>
+      <div class="stat"><div class="k">Dias trabalhados</div><div class="v" id="mDias">0</div></div>
+      <div class="stat"><div class="k">Tempo de serviço</div><div class="v" id="mHoras">0h 00m</div></div>
+      <div class="stat"><div class="k">Horas noturnas</div><div class="v" id="mNoite">0h 00m</div></div>
+      <div class="stat"><div class="k">Horas acima das 8h</div><div class="v" id="mExtra">0h 00m</div></div>
     </div>
     <div class="liquido" id="liquido"></div>
     <div class="liquido recibo" id="recibo"></div>
@@ -735,6 +737,8 @@ footer{text-align:center;font-size:.72rem;color:var(--muted);padding:10px 10px 0
           <input type="number" step="0.5" min="1" id="cfg_limiteDiario"></div>
         <div class="fld-wrap"><label class="fld" for="cfg_limiteDescanso">Descanso mínimo entre dias (horas)</label>
           <input type="number" step="0.5" min="0" id="cfg_limiteDescanso"></div>
+        <div class="fld-wrap"><label class="fld" for="cfg_periodoNoite">Período noturno</label>
+          <input type="text" inputmode="numeric" id="cfg_periodoNoite" placeholder="20:00 – 07:00"></div>
       </div>
 
       <div class="sgroup">Descontos mensais</div>
@@ -907,11 +911,12 @@ const RUB_TAXA = RUBRICAS.filter(r => r.taxa !== false);
 const taxaMostrada = id => familia(id) === 'descanso' ? cfg[id.endsWith('N') ? 'descComplN' : 'descComplD'] : cfg[id];
 const nomeRubrica = id => id === 'normal' ? 'Serviço normal' : (RUBRICAS.find(r => r.id === id) || {nome:'—'}).nome;
 
-const CFG_DEFAULT = {versao:5, irsAuto:true, irsTabela:'I', dependentes:0, taxasAuto:true, refeicaoAuto:true, janelaAlmoco:'11:00 – 14:00', janelaJantar:'18:00 – 21:00', limiteDescanso:11, vencBase:1178.49, horasSemana:40, subsidio:7.20, noturno:1.70, refPen:7.45, limiteDiario:8, splitExtra:true, ss:11, irs:0, outros:0, subIsento:true};
+const CFG_DEFAULT = {versao:5, irsAuto:true, irsTabela:'I', dependentes:0, taxasAuto:true, refeicaoAuto:true, periodoNoite:'20:00 – 07:00', janelaAlmoco:'11:00 – 14:00', janelaJantar:'18:00 – 21:00', limiteDescanso:11, vencBase:1178.49, horasSemana:40, subsidio:7.20, noturno:1.70, refPen:7.45, limiteDiario:8, splitExtra:true, ss:11, irs:0, outros:0, subIsento:true};
 RUBRICAS.forEach(r => CFG_DEFAULT[r.id] = r.def);
 
 const K_CFG = 'chapas-config', K_REG = 'chapas-registos', K_TS = 'chapas-guardado', K_MINHAS = 'chapas-minhas';
-const NOITE_INI = 20*60, NOITE_FIM = 7*60;
+let NOITE_INI = 20*60, NOITE_FIM = 7*60;
+function aplicarNoite(){ try { const j = janela(cfg.periodoNoite || '20:00 – 07:00'); if (j && !isNaN(j[0]) && !isNaN(j[1])){ NOITE_INI = j[0]; NOITE_FIM = j[1]; } } catch(e){} }
 const EIXO_INI = 4*60, EIXO_FIM = 30.5*60;
 
 let cfg = {...CFG_DEFAULT};
@@ -1165,6 +1170,7 @@ async function carregar(){
     }
   }
   aplicarTaxasAuto();
+  aplicarNoite();
   const r = await Store.ler(K_REG);
   if (r){ try { registos = JSON.parse(r) || []; } catch(e){ registos = []; } }
 }
@@ -1253,7 +1259,7 @@ function recarregarCampos(){
   const ia = $('cfg_irsAuto'); if (ia){ ia.checked = !!cfg.irsAuto; $('cfg_irs').readOnly = !!cfg.irsAuto; }
   const it = $('cfg_irsTabela'); if (it) it.value = cfg.irsTabela || 'I';
   const idp = $('cfg_dependentes'); if (idp) idp.value = cfg.dependentes || 0;
-  ['janelaAlmoco','janelaJantar'].forEach(k => { const el = $('cfg_'+k); if (el) el.value = cfg[k]; });
+  ['janelaAlmoco','janelaJantar','periodoNoite'].forEach(k => { const el = $('cfg_'+k); if (el) el.value = cfg[k]; });
   Object.keys(FATORES).forEach(k => { const el = $('cfg_'+k); if (el) el.readOnly = !!cfg.taxasAuto; });
   notaBase();
 }
@@ -1538,13 +1544,14 @@ function montarDefinicoes(){
   const ra = $('cfg_refeicaoAuto');
   ra.checked = !!cfg.refeicaoAuto;
   ra.addEventListener('change', () => { cfg.refeicaoAuto = ra.checked; gravarCfg(); refeicaoAuto(); });
-  ['janelaAlmoco','janelaJantar'].forEach(k => {
+  ['janelaAlmoco','janelaJantar','periodoNoite'].forEach(k => {
     const el = $('cfg_'+k);
     el.value = cfg[k];
     el.addEventListener('change', () => {
       const j = janela(el.value);
       if (!j || isNaN(j[0]) || isNaN(j[1])){ toast('Escreva assim: 11:00 – 14:00'); el.value = cfg[k]; return; }
       cfg[k] = `${fmtHora(j[0])} – ${fmtHora(j[1])}`; el.value = cfg[k];
+      if (k === 'periodoNoite'){ aplicarNoite(); if (atual) consultar(); toast('Período noturno mudado. Vale para os dias que registar a partir de agora.'); }
       gravarCfg(); refeicaoAuto();
     });
   });
@@ -1653,8 +1660,8 @@ function consultar(){
   if (noite > 0){
     hint.hidden = false;
     hint.textContent = (maioriaNoite && $('rubricaSelect').value !== 'normal')
-      ? `Serviço maioritariamente noturno (${hm(noite)} entre as 20:00 e as 07:00). Rubrica ajustada — altere se não for o caso.`
-      : `${hm(noite)} caem no período noturno (20:00–07:00).`;
+      ? `Serviço maioritariamente noturno (${hm(noite)} entre as ${fmtHora(NOITE_INI)} e as ${fmtHora(NOITE_FIM)}). Rubrica ajustada — altere se não for o caso.`
+      : `${hm(noite)} caem no período noturno (${fmtHora(NOITE_INI)}–${fmtHora(NOITE_FIM)}).`;
   } else hint.hidden = true;
 
   $('result').hidden = false;
@@ -2233,7 +2240,9 @@ function pintarMes(){
   $('mExtra').textContent = hm(ext);
   const L = pintarLiquido(doMes, val);
   $('mValor').textContent = '≈ ' + eur(L.liq);
-  $('mComBase').textContent = `Bruto ${eur(L.bruto)} · acréscimos e subsídios ${eur(val)}`;
+  $('mComBase').innerHTML = L.subs > 0
+    ? `<b>${eur(L.liq - L.subs)}</b> na conta + <b>${eur(L.subs)}</b> no cartão refeição`
+    : `Bruto ${eur(L.bruto)}`;
   pintarDesatualizados(doMes);
   pintarRecibo(doMes, red);
 
@@ -2271,8 +2280,10 @@ function pintarRecibo(doMes, red){
     {nome:'Feriados',               dica:'', ks:['feriadoD','feriadoSuplD','feriadoSuplN']},
     {nome:'Noite',                  dica:'suplemento das horas noturnas', ks:['noturno']},
     {nome:'Descanso curto',         dica:'menos de 11h entre dois dias', ks:['redDescanso']},
-    {nome:'Refeição',               dica:'cartão refeição', ks:['subsidio','refPen']}
   ];
+  const refL = g.filter(l => l.k === 'subsidio' || l.k === 'refPen');
+  const refV = refL.reduce((a,l) => a + l.v, 0), refD = refL.reduce((a,l) => a + (l.dias || 0), 0);
+  const totExtra = tot - refV;
   const porK = Object.fromEntries(g.map(l => [l.k, l]));
   const blocos = GRUPOS.map(G => {
     const ls = G.ks.map(k => porK[k]).filter(Boolean);
@@ -2290,7 +2301,8 @@ function pintarRecibo(doMes, red){
         <div class="rg-barra"><i style="width:${Math.max(3, b.v / max * 100).toFixed(1)}%"></i></div>
         <div class="rg-sub">${b.qtd}${b.dica ? ' · ' + b.dica : ''}</div>
       </div>`).join('') + `</div>` +
-    `<div class="lr fim"><span>Total extra do mês</span><span>${eur(tot)}</span></div>` +
+    `<div class="lr fim"><span>Total extra do mês</span><span>${eur(totExtra)}</span></div>` +
+    (refV > 0 ? `<div class="lr"><span>Cartão refeição<small>${refD} ${refD === 1 ? 'dia' : 'dias'}, à parte do vencimento</small></span><span>${eur(refV)}</span></div>` : '') +
     `<details class="rec-det"><summary>Conferir com o recibo, linha a linha</summary>` +
     g.map(l => `<div class="lr"><span>${ROTULO[l.k]}<small>${qt(l)}</small></span><span>${eur(l.v)}</span></div>`).join('') +
     `<p class="note">Quantidades em horas decimais, como aparecem no recibo.</p></details>`;
