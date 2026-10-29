@@ -1,0 +1,2447 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Chapas &amp; Vencimento</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================================
+   Chapas & Vencimento — folha de estilos
+   Registo de serviço e vencimento para motorista de carreira.
+   A cor codifica o sinal do dinheiro: verde o que entra,
+   vermelho o que sai. Tudo o resto é tinta sobre papel.
+   =========================================================== */
+:root{
+  --page:#000000;
+  --panel:#141414;
+  --panel-sunk:#1E1E1E;
+  --ink:#FFFFFF;
+  --ink-soft:#E3E6E4;
+  --muted:#9BA39F;
+    --rule:#2B2B2B;
+  --rule-soft:#222222;
+  --rule-strong:#3A3A3A;
+  --brand:#037757;
+  --brand-hover:#048E69;
+  --brand-deep:#094233;
+  --credit:#50B99B;
+  --credit-bg:#0E3329;
+  --credit-line:#1C5544;
+  --debit:#F08A80;
+  --debit-bg:#33110F;
+  --debit-line:#5C2320;
+  --night:#12313C;
+  --night-ink:#9FCADA;
+  --focus:#50B99B;
+  --r:4px;
+  --r-lg:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  padding-bottom:0;
+  font-family:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:'tnum' 1,'ss01' 1;
+  background:var(--page);
+  color:var(--ink);
+  font-size:15px;
+  line-height:1.5;
+  padding:0 0 calc(78px + env(safe-area-inset-bottom));
+}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px;display:flex;flex-direction:column;gap:12px}
+.wrap>header{margin-left:-16px;margin-right:-16px;padding-left:18px;padding-right:18px}
+
+/* ---------- masthead ---------- */
+header{
+  position:sticky;top:0;z-index:20;
+  display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
+  padding:20px 2px 11px;margin-bottom:4px;
+  background:var(--page);border-bottom:1px solid var(--rule);
+}
+header::after{
+  content:'';position:absolute;left:0;right:0;top:100%;height:10px;
+  background:linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,0));
+  opacity:0;transition:opacity .15s;pointer-events:none;
+}
+header.rolado::after{opacity:1}
+h1{font-size:1.15rem;font-weight:600;letter-spacing:-.015em;line-height:1.2}
+header .sub{font-size:.8rem;color:var(--muted);padding-bottom:2px}
+
+/* ---------- painéis ---------- */
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:var(--r-lg);padding:18px 16px}
+.card h2{font-size:.95rem;font-weight:600;letter-spacing:-.01em;margin-bottom:14px}
+
+/* ---------- selector de dia ---------- */
+.days{display:grid;grid-template-columns:repeat(3,1fr);margin-bottom:14px;
+      border:1px solid var(--rule);border-radius:var(--r);overflow:hidden}
+.days button{
+  font:inherit;font-size:.85rem;font-weight:500;padding:10px 4px;
+  background:var(--panel);color:var(--muted);
+  border:0;border-left:1px solid var(--rule);cursor:pointer;
+}
+.days button:first-child{border-left:0}
+.days button[aria-pressed="true"]{background:var(--brand-deep);color:var(--credit);font-weight:600}
+
+/* ---------- procura ---------- */
+.lookup{display:grid;grid-template-columns:1fr auto;gap:8px}
+input,select{
+  font:inherit;width:100%;padding:10px 11px;
+  background:var(--panel);color:var(--ink);
+  border:1px solid var(--rule);border-radius:var(--r);
+}
+input:hover,select:hover{border-color:var(--rule-strong)}
+input[readonly]{color:var(--muted);background:var(--panel-sunk)}
+#chapaInput{font-size:1.6rem;font-weight:600;letter-spacing:.06em;padding:6px 11px}
+#chapaInput::placeholder{font-weight:400;letter-spacing:0;font-size:.92rem;color:var(--muted)}
+input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible,.dropzone:focus-visible{
+  outline:2px solid var(--focus);outline-offset:2px
+}
+
+/* ---------- botões ---------- */
+.btn{
+  font:inherit;font-weight:600;font-size:.87rem;padding:10px 16px;
+  border-radius:var(--r);border:1px solid var(--brand);
+  background:var(--brand);color:#FFFFFF;cursor:pointer;
+}
+.btn:hover{background:var(--brand-hover);border-color:var(--brand-hover)}
+.btn-go{white-space:nowrap}
+.btn-lime{background:var(--credit);border-color:var(--credit);color:#062018;width:100%;padding:12px;font-weight:600}
+.btn-lime:hover{background:#6BCCB0;border-color:#6BCCB0}
+.btn-quiet{background:var(--panel);color:var(--ink-soft);border-color:var(--rule);font-weight:500}
+.btn-quiet:hover{background:var(--panel-sunk)}
+.msg{margin-top:11px;font-size:.85rem;color:var(--debit)}
+.msg[hidden]{display:none}
+
+/* ---------- lista de chapas ---------- */
+.todas{margin-top:16px;padding-top:12px;border-top:1px solid var(--rule)}
+.todas-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:2px}
+.todas-head b{font-size:.85rem;font-weight:600}
+#listaContagem{font-size:.76rem;color:var(--muted)}
+.lista{max-height:340px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.lc{
+  display:grid;grid-template-columns:58px 1fr auto;align-items:baseline;gap:10px;width:100%;
+  text-align:left;font:inherit;font-size:.86rem;background:transparent;color:var(--ink);
+  border:0;border-top:1px solid var(--rule-soft);padding:9px 2px;cursor:pointer;
+}
+.lc:first-child{border-top:0}
+.lc:hover{background:var(--panel-sunk)}
+.lc b{font-weight:600;letter-spacing:.02em}
+.lc span{color:var(--muted);font-size:.82rem}
+.lc em{font-style:normal;font-weight:500;font-size:.82rem;color:var(--muted)}
+.lc.longa em{color:var(--ink);font-weight:600}
+.lc .dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--credit);
+         margin-left:5px;vertical-align:middle}
+
+/* ---------- barra do serviço ---------- */
+.shift{margin:0 0 18px}
+.track{position:relative;height:38px;background:var(--panel-sunk);
+       border:1px solid var(--rule);border-radius:var(--r)}
+.band{position:absolute;top:0;bottom:0;background:var(--night)}
+.seg{position:absolute;top:6px;bottom:6px;border-radius:2px}
+.seg-work{background:var(--credit)}
+.seg-break{background:var(--panel);border:1px solid var(--rule)}
+.seg-av{background:repeating-linear-gradient(135deg,var(--credit) 0 3px,transparent 3px 6px);
+        border:1px solid var(--credit)}
+.ticks{position:relative;height:16px;margin-top:4px;font-size:.68rem;color:var(--muted)}
+.ticks span{position:absolute;transform:translateX(-50%)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:9px;font-size:.72rem;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:8px;border-radius:1px;margin-right:6px;vertical-align:baseline}
+.i-work{background:var(--credit)}
+.i-break{background:var(--panel);border:1px solid var(--rule)}
+.i-night{background:var(--night)}
+.i-av{background:repeating-linear-gradient(135deg,var(--credit) 0 3px,transparent 3px 6px);border:1px solid var(--credit)}
+
+/* ---------- resultado ---------- */
+#result[hidden]{display:none}
+.res-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+          margin-bottom:16px;padding-bottom:11px;border-bottom:1px solid var(--rule-strong)}
+.res-head strong{font-size:1.5rem;font-weight:600;letter-spacing:.04em}
+.res-head span{font-size:.78rem;color:var(--muted)}
+.rows{display:flex;flex-direction:column;font-size:.87rem}
+.row{display:flex;justify-content:space-between;gap:14px;padding:6px 0;border-top:1px solid var(--rule-soft)}
+.row:first-child{border-top:0}
+.row dt{color:var(--muted)}
+.row dd{font-weight:600;text-align:right}
+.row.spans dd{font-weight:400;color:var(--ink-soft)}
+.carreiras{margin-top:14px;padding-top:13px;border-top:1px solid var(--rule);font-size:.8rem;color:var(--muted)}
+.carreiras b{display:block;font-weight:500;margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{background:var(--panel-sunk);border:1px solid var(--rule);border-radius:var(--r);
+      padding:2px 7px;font-size:.78rem;font-weight:500;color:var(--ink-soft)}
+
+/* ---------- guia da rubrica ---------- */
+.guia{background:var(--panel-sunk);border:1px solid var(--rule);border-radius:var(--r);
+      padding:13px 13px 11px;margin-bottom:14px}
+.guia .q{font-size:.8rem;color:var(--muted);margin-bottom:7px}
+.guia .q.later{margin-top:13px}
+.guia.na .q.later,.guia.na .opts.two{opacity:.45}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.opts.two{grid-template-columns:1fr 1fr}
+.opts button{
+  font:inherit;font-size:.8rem;font-weight:500;padding:8px 3px;
+  background:var(--panel);color:var(--ink-soft);
+  border:1px solid var(--rule);border-radius:var(--r);cursor:pointer;
+}
+.opts button[aria-pressed="true"]{background:var(--brand-deep);border-color:var(--credit-line);color:var(--credit);font-weight:600}
+.opts button:disabled{cursor:default;color:var(--muted)}
+
+/* ---------- pagamento ---------- */
+.pay{margin-top:18px;padding-top:16px;border-top:1px solid var(--rule)}
+.rubrica-wrap{margin-top:16px;padding-top:14px;border-top:1px solid var(--rule-soft)}
+label.fld{display:block;font-size:.78rem;color:var(--muted);margin-bottom:5px}
+.checks{margin-top:12px;display:flex;flex-direction:column}
+.check{display:flex;align-items:center;gap:10px;font-size:.85rem;padding:7px 0;cursor:pointer;
+       border-top:1px solid var(--rule-soft)}
+.check:first-child{border-top:0}
+.check input{width:20px;height:20px;flex:none;accent-color:var(--credit);padding:0}
+.check{min-height:38px}
+.check .amt{margin-left:auto;color:var(--muted);font-size:.8rem}
+.total{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+       margin-top:16px;padding-top:13px;border-top:1px solid var(--rule-strong)}
+.total .lbl{font-size:.85rem;font-weight:500}
+.total .val{font-size:1.65rem;font-weight:600;letter-spacing:-.02em;color:var(--credit)}
+.save{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:16px}
+.escala-card{margin-top:12px}
+.escala-add{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,.8fr) auto;gap:8px;margin-top:4px}
+.escala-lista{margin-top:12px}
+.escala-lista .x{background:none;border:0;color:var(--muted);font-size:1.2rem;padding:4px 8px;cursor:pointer}
+.escala-lista .lrow.passado{opacity:.45}
+.escala-lista .lrow.erro small{color:var(--debit)}
+.escala-avisos{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--rule)}
+.aviso{margin-top:16px;padding-top:14px;border-top:1px solid var(--rule)}
+.aviso-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.aviso-grid .btn{white-space:nowrap}
+.aviso .btn-link{display:block;width:100%;margin-top:8px}
+.hint{font-size:.76rem;color:var(--night-ink);background:var(--night);
+      border-radius:var(--r);padding:8px 10px;margin-top:11px}
+.hint[hidden]{display:none}
+
+/* horas avulsas */
+.avulsas{margin-top:14px;padding-top:13px;border-top:1px solid var(--rule-soft)}
+.av-grid{display:grid;grid-template-columns:1fr auto 1fr auto auto;gap:8px;align-items:center}
+.av-grid>span{font-size:.83rem;color:var(--muted)}
+.av-grid input{text-align:center;padding:9px 6px}
+.av-zero{padding:9px 12px;white-space:nowrap}
+
+/* ---------- mês ---------- */
+.mhead{display:flex;align-items:center;justify-content:space-between;gap:8px;
+       margin-bottom:16px;padding-bottom:11px;border-bottom:1px solid var(--rule-strong)}
+.mhead .name{font-size:1rem;font-weight:600}
+.nav{display:flex;gap:6px}
+.nav button{font:inherit;width:33px;height:33px;line-height:1;border:1px solid var(--rule);
+            background:var(--panel);color:var(--ink);border-radius:var(--r);cursor:pointer}
+.nav button:hover{background:var(--panel-sunk)}
+.nav button:disabled{opacity:.35;cursor:default}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);
+       border:1px solid var(--rule);border-radius:var(--r);overflow:hidden}
+.stat{background:var(--panel);padding:11px 12px}
+.stat .k{font-size:.72rem;color:var(--muted)}
+.stat .v{font-size:1.05rem;font-weight:600;margin-top:2px}
+.stat.wide{grid-column:1/-1;background:var(--brand-deep);color:#FFFFFF}
+.stat.wide .k{color:rgba(255,255,255,.72)}
+.stat.wide .v{font-size:1.45rem;font-weight:600;letter-spacing:-.02em}
+.stat .k-foot{margin-top:5px;opacity:.85}
+.grid2-top{margin-top:8px}
+.stat.sub{grid-column:1/-1;background:var(--panel-sunk);font-size:.8rem;color:var(--muted);padding:9px 12px}
+
+/* ---------- líquido ---------- */
+.liquido{margin-top:16px;padding-top:14px;border-top:1px solid var(--rule);font-size:.86rem}
+.lr{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:6px 0;
+    border-top:1px solid var(--rule-soft)}
+.lr:first-child{border-top:0}
+.lr>span:first-child{color:var(--muted)}
+.lr>span:last-child{font-weight:600;white-space:nowrap}
+.lr small{display:block;font-size:.73rem;opacity:.85}
+.lr.neg>span:last-child{color:var(--debit)}
+.lr.fim{margin-top:4px;padding-top:12px;border-top:1px solid var(--rule-strong)}
+.lr.fim>span:first-child{color:var(--ink);font-weight:600}
+.lr.fim>span:last-child{font-size:1.35rem;font-weight:600;letter-spacing:-.02em;color:var(--credit)}
+.rec-tit{display:block;font-size:.85rem;font-weight:600;margin-bottom:4px}
+.recibo .lr.fim>span:last-child{font-size:1.1rem}
+.lr.aviso{display:block;color:var(--night-ink);background:var(--night);border:0;
+          border-radius:var(--r);padding:9px 11px;margin-top:10px;font-size:.77rem}
+
+/* ---------- registos ---------- */
+.desatual{margin-top:14px;padding:12px;border:1px solid var(--night);border-radius:var(--r);
+          background:var(--night);color:var(--night-ink)}
+.desatual[hidden]{display:none}
+.desatual p{font-size:.78rem;margin-bottom:10px;line-height:1.5}
+.desatual .btn{width:100%}
+.entries{margin-top:14px;display:flex;flex-direction:column}
+.entry{display:flex;align-items:center;gap:12px;padding:10px 0;
+       border-top:1px solid var(--rule-soft);font-size:.85rem}
+.entry .d{font-weight:600;min-width:34px;line-height:1.1}
+.entry .d small{display:block;font-size:.68rem;font-weight:400;color:var(--muted)}
+.entry .m{flex:1;min-width:0}
+.entry .m b{font-weight:600}
+.entry .m small{display:block;color:var(--muted);font-size:.75rem}
+.entry .v{font-weight:600;white-space:nowrap;color:var(--credit)}
+.entry .x{font:inherit;background:transparent;border:0;color:var(--muted);cursor:pointer;
+          font-size:1.15rem;line-height:1;padding:2px 5px}
+.entry .x:hover{color:var(--debit)}
+.empty{margin-top:14px;padding:20px 14px;border:1px dashed var(--rule);border-radius:var(--r);
+       text-align:center;font-size:.83rem;color:var(--muted)}
+.mfoot{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
+
+/* ---------- dados e carregamento ---------- */
+.dados-top{margin-bottom:2px}
+.dados-top h2{margin-bottom:6px}
+.dados-estado{font-size:.79rem;color:var(--muted);margin:0;line-height:1.45}
+.dados-estado b{color:var(--ink);font-weight:600}
+.dados-ts{font-size:.75rem;color:var(--muted);margin:5px 0 0}
+.dados-aviso{margin:11px 0 0;padding:10px 11px;border-radius:var(--r);
+             background:var(--night);color:var(--night-ink);font-size:.78rem}
+.dados-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}
+.nuvem{margin-top:14px;padding:14px 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.dados-btns .btn{flex:1;min-width:112px}
+.perigo-linha{margin-top:12px;padding-top:11px;border-top:1px solid var(--rule-soft)}
+.perigo-linha[hidden]{display:none}
+.btn-perigo{font:inherit;font-size:.8rem;font-weight:500;background:none;border:0;padding:9px 0;min-height:34px;
+            color:var(--debit);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.btn-perigo:hover{color:#F5A8A0}
+.btn-perigo:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:2px}
+.dropzone{margin-top:13px;padding:24px 14px;border:1px dashed var(--rule);border-radius:var(--r);
+          text-align:center;cursor:pointer;background:var(--panel-sunk)}
+.dropzone:hover{border-color:var(--muted)}
+.dropzone.sobre{border-color:var(--credit);border-style:solid;background:var(--credit-bg)}
+.dropzone b{display:block;font-size:.9rem;font-weight:600}
+.dropzone small{display:block;margin-top:4px;font-size:.76rem;color:var(--muted)}
+.upstate{margin-top:13px;padding:10px 12px;border-radius:var(--r);font-size:.8rem;
+         background:var(--night);color:var(--night-ink)}
+.upstate.erro{background:var(--debit-bg);color:var(--debit);border:1px solid var(--debit-line)}
+.upstate.ok{background:var(--credit-bg);color:var(--credit);border:1px solid var(--credit-line)}
+.lrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 2px;
+      border-top:1px solid var(--rule-soft);font-size:.85rem}
+.lrow:first-child{border-top:0}
+.lrow b{font-weight:600;letter-spacing:.02em}
+.lrow-det{display:block;color:var(--muted)}
+.lrow small{font-size:.76rem;margin-top:1px}
+.minha-tag{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:var(--r);
+           background:var(--credit-bg);color:var(--credit);font-size:.68rem;font-weight:600;
+           vertical-align:middle}
+
+/* ---------- definições ---------- */
+details{background:var(--panel);border:1px solid var(--rule);border-radius:var(--r-lg)}
+summary{padding:15px 16px;font-size:.92rem;font-weight:600;cursor:pointer;list-style:none;
+        display:flex;justify-content:space-between;align-items:center}
+summary::-webkit-details-marker{display:none}
+summary::after{content:'+';font-size:1.15rem;font-weight:400;color:var(--muted);line-height:1}
+details[open] summary::after{content:'–'}
+.sbody{padding:0 16px 18px;border-top:1px solid var(--rule);padding-top:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fld-wrap{margin-bottom:11px}
+.sgroup{font-size:.79rem;font-weight:600;color:var(--ink);margin:20px 0 10px;
+        padding-bottom:6px;border-bottom:1px solid var(--rule)}
+.check-flush{padding-top:0}
+.note{font-size:.76rem;color:var(--muted);margin-top:11px;line-height:1.55}
+.note-tight{margin-top:4px}
+.note-loose{margin-top:10px}
+footer{text-align:center;font-size:.72rem;color:var(--muted);padding:10px 10px 0}
+
+
+/* ---------- separadores ---------- */
+.pane[hidden]{display:none}
+.pane{display:flex;flex-direction:column;gap:12px}
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:40;
+  display:grid;grid-template-columns:repeat(3,1fr);
+  background:rgba(10,10,10,.92);backdrop-filter:blur(12px);
+  border-top:1px solid var(--rule);
+  padding:6px 8px calc(6px + env(safe-area-inset-bottom));
+}
+.tabbar button{
+  font:inherit;font-size:.72rem;font-weight:500;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:7px 4px 6px;background:none;border:0;border-radius:var(--r);
+  color:var(--muted);cursor:pointer;
+}
+.tabbar button:hover{color:var(--ink-soft)}
+.tabbar button[aria-selected="true"]{color:var(--credit);font-weight:600}
+.tb-ico{display:block;width:23px;height:23px}
+.tb-ico svg{width:100%;height:100%;stroke-linecap:round;stroke-linejoin:round}
+.tabbar button[aria-selected="true"] .tb-ico svg{stroke-width:2.1}
+.tabbar button[aria-selected="true"] .tb-txt{position:relative}
+.tabbar button[aria-selected="true"] .tb-txt::after{
+  content:'';position:absolute;left:50%;transform:translateX(-50%);
+  bottom:-5px;width:15px;height:2px;border-radius:1px;background:var(--credit);
+}
+
+/* ---------- aviso flutuante ---------- */
+#toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
+       background:var(--panel-sunk);color:var(--ink);border:1px solid var(--rule-strong);padding:10px 17px;border-radius:var(--r);
+       font-size:.83rem;opacity:0;pointer-events:none;
+       transition:opacity .18s,transform .18s;z-index:30;
+       box-shadow:0 8px 26px rgba(0,0,0,.6)}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:359px){
+  .grid2{grid-template-columns:1fr}
+  .stats{grid-template-columns:1fr}
+}
+</style>
+  <meta name="theme-color" content="#000000">
+  <meta name="color-scheme" content="dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Chapas">
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Chapas &amp; Vencimento</h1>
+    <span class="sub">Escala e vencimento do motorista</span>
+  </header>
+
+  <div class="pane" id="pane-chapa" role="tabpanel" aria-labelledby="tab-chapa">
+  <!-- LOOKUP -->
+  <section class="card">
+    <div class="days" role="group" aria-label="Tipo de dia">
+      <button type="button" data-dia="util" aria-pressed="true">Dia útil</button>
+      <button type="button" data-dia="sabado" aria-pressed="false">Sábado</button>
+      <button type="button" data-dia="domingo" aria-pressed="false">Domingo</button>
+    </div>
+    <div class="lookup">
+      <input id="chapaInput" type="text" inputmode="numeric" autocomplete="off"
+             list="chapaList" placeholder="Número da chapa" aria-label="Número da chapa">
+      <datalist id="chapaList"></datalist>
+      <button class="btn btn-go" id="btnVer" type="button">Ver</button>
+    </div>
+    <p class="msg" id="msg" role="status" hidden></p>
+
+    <div class="todas">
+      <div class="todas-head">
+        <b>Todas as chapas</b>
+        <span id="listaContagem"></span>
+      </div>
+      <div class="lista" id="listaChapas"></div>
+    </div>
+  </section>
+
+  <!-- RESULT -->
+  <section class="card" id="result" hidden>
+    <div class="res-head">
+      <strong id="rChapa">—</strong>
+      <span id="rDia"></span>
+    </div>
+
+    <div class="shift">
+      <div class="track" id="track"></div>
+      <div class="ticks" id="ticks"></div>
+      <div class="legend">
+        <span><i class="i-work"></i>Serviço</span>
+        <span><i class="i-break"></i>Pausa</span>
+        <span><i class="i-av"></i>Avulsas</span>
+        <span><i class="i-night"></i>Período noturno</span>
+      </div>
+    </div>
+
+    <dl class="rows">
+      <div class="row spans"><dt>1.º período</dt><dd id="rP1"></dd></div>
+      <div class="row spans"><dt>Pausa</dt><dd id="rPausa"></dd></div>
+      <div class="row spans"><dt>2.º período</dt><dd id="rP2"></dd></div>
+      <div class="row"><dt>Tempo de serviço</dt><dd id="rTotal"></dd></div>
+      <div class="row"><dt>Horas noturnas</dt><dd id="rNoite"></dd></div>
+      <div class="row"><dt>Amplitude</dt><dd id="rAmpl"></dd></div>
+      <div class="row"><dt>Reservas</dt><dd id="rReservas"></dd></div>
+    </dl>
+
+    <div class="carreiras"><b>Carreiras</b><div class="chips" id="rCarreiras"></div></div>
+
+    <div class="pay">
+      <div class="guia" id="guia">
+        <p class="q">Esse dia, na sua escala</p>
+        <div class="opts quad" id="gEscala" role="group" aria-label="Tipo de dia na escala">
+          <button type="button" data-v="trabalho" aria-pressed="true">Dia de trabalho</button>
+          <button type="button" data-v="folga" aria-pressed="false">Folga gozada depois</button>
+          <button type="button" data-v="folgaVend" aria-pressed="false">Folga vendida</button>
+          <button type="button" data-v="feriado" aria-pressed="false">Feriado</button>
+        </div>
+        <p class="q later" id="qAtrib">A chapa já estava atribuída a si?</p>
+        <div class="opts two" id="gAtrib" role="group" aria-label="Chapa atribuída">
+          <button type="button" data-v="sim" aria-pressed="true">Sim, era a minha</button>
+          <button type="button" data-v="nao" aria-pressed="false">Não, foi a mais</button>
+        </div>
+        <p class="note" id="guiaNota"></p>
+      </div>
+
+      <div class="avulsas">
+        <label class="fld" for="avH">Horas avulsas, feitas depois da chapa</label>
+        <div class="av-grid">
+          <input type="number" id="avH" min="0" max="12" step="1" placeholder="0" aria-label="Horas avulsas">
+          <span>h</span>
+          <input type="number" id="avM" min="0" max="59" step="5" placeholder="00" aria-label="Minutos avulsos">
+          <span>min</span>
+          <button type="button" class="btn btn-quiet av-zero" id="avLimpar">Limpar</button>
+        </div>
+        <p class="note" id="avNota"></p>
+      </div>
+
+      <div class="rubrica-wrap">
+        <label class="fld" for="rubricaSelect">Rubrica aplicável</label>
+        <select id="rubricaSelect"></select>
+      </div>
+      <p class="hint" id="hintNoite" hidden></p>
+
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="ckSub" checked>
+          <span>Subsídio de refeição</span><span class="amt" id="amtSub"></span></label>
+        <label class="check"><input type="checkbox" id="ckNoite" checked>
+          <span>Suplemento noturno</span><span class="amt" id="amtNoite"></span></label>
+        <label class="check"><input type="checkbox" id="ckRefPen">
+          <span>1.ª refeição penalizada</span><span class="amt" id="amtRefPen"></span></label>
+      </div>
+      <p class="note" id="notaRefeicao"></p>
+
+      <p class="note" id="notaHoras"></p>
+
+      <div class="total">
+        <span class="lbl" id="lblTotal">Acréscimo ao vencimento</span>
+        <span class="val" id="rValor">0,00 €</span>
+      </div>
+
+      <div class="save">
+        <input type="date" id="dataTrabalho" aria-label="Data em que trabalhou">
+        <button class="btn btn-lime" id="btnRegistar" type="button">Registar</button>
+      </div>
+
+      <div class="aviso">
+        <label class="fld" for="avisoAntes">Aviso antes de começar a chapa</label>
+        <div class="aviso-grid">
+          <select id="avisoAntes">
+            <option value="15">15 min antes</option>
+            <option value="30" selected>30 min antes</option>
+            <option value="45">45 min antes</option>
+            <option value="60">1 hora antes</option>
+            <option value="90">1h30 antes</option>
+            <option value="120">2 horas antes</option>
+          </select>
+          <button class="btn btn-quiet" id="btnAviso" type="button">Pôr no calendário</button>
+        </div>
+        <button class="btn btn-quiet btn-link" id="btnAvisoGoogle" type="button">Abrir no Google Calendar</button>
+        <p class="note">O alarme fica no calendário do telemóvel e toca mesmo com a app fechada. Usa a data acima; se estiver vazia, escolhe o próximo dia desta chapa. No Google Calendar o aviso segue o tempo de notificação definido nessa app.</p>
+      </div>
+    </div>
+  </section>
+  </div>
+
+  <div class="pane" id="pane-mes" role="tabpanel" aria-labelledby="tab-mes" hidden>
+  <!-- MONTH -->
+  <section class="card">
+    <div class="mhead">
+      <span class="name" id="mesNome">—</span>
+      <div class="nav">
+        <button type="button" id="mesPrev" aria-label="Mês anterior">‹</button>
+        <button type="button" id="mesNext" aria-label="Mês seguinte">›</button>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="k">Dias trabalhados</div><div class="v" id="mDias">0</div></div>
+      <div class="stat"><div class="k">Tempo de serviço</div><div class="v" id="mHoras">0h 00m</div></div>
+      <div class="stat"><div class="k">Horas noturnas</div><div class="v" id="mNoite">0h 00m</div></div>
+      <div class="stat"><div class="k">Horas acima das 8h</div><div class="v" id="mExtra">0h 00m</div></div>
+      <div class="stat wide">
+        <div class="k">A receber este mês (aproximado)</div>
+        <div class="v" id="mValor">0,00 €</div>
+        <div class="k k-foot" id="mComBase"></div>
+      </div>
+    </div>
+    <div class="liquido" id="liquido"></div>
+    <div class="liquido recibo" id="recibo"></div>
+    <div class="desatual" id="desatual" hidden>
+      <p id="desatualTxt"></p>
+      <button class="btn btn-quiet" id="btnAtualizar" type="button">Recalcular com os valores atuais</button>
+    </div>
+    <div class="entries" id="entries"></div>
+    <p class="empty" id="mEmpty">Ainda não registou nenhum dia neste mês. Consulte uma chapa e toque em Registar.</p>
+    <div class="mfoot">
+      <button class="btn btn-quiet" id="btnCopiar" type="button">Copiar resumo</button>
+      <button class="btn btn-quiet" id="btnLimpar" type="button">Limpar mês</button>
+    </div>
+  </section>
+
+  <section class="card escala-card" aria-labelledby="escTit">
+    <div class="mhead"><span class="name" id="escTit">A minha escala</span><span class="note" id="escConta" style="margin:0"></span></div>
+    <label class="fld" for="escData">Dia e chapa</label>
+    <div class="escala-add">
+      <input type="date" id="escData" aria-label="Dia">
+      <input type="text" id="escChapa" inputmode="numeric" list="chapaList" placeholder="Chapa" aria-label="Número da chapa" autocomplete="off">
+      <button class="btn" id="escAdd" type="button">Adicionar</button>
+    </div>
+    <p class="note">Depois de adicionar, o dia avança sozinho para o seguinte. Nas folgas, avance o dia sem adicionar.</p>
+    <div class="escala-lista" id="escLista"></div>
+    <div class="escala-avisos">
+      <select id="escAntes" aria-label="Quanto tempo antes">
+        <option value="15">Aviso 15 min antes</option>
+        <option value="30" selected>Aviso 30 min antes</option>
+        <option value="45">Aviso 45 min antes</option>
+        <option value="60">Aviso 1 hora antes</option>
+        <option value="90">Aviso 1h30 antes</option>
+        <option value="120">Aviso 2 horas antes</option>
+      </select>
+      <button class="btn btn-lime" id="escAvisos" type="button" style="width:auto">Criar avisos</button>
+    </div>
+    <p class="note">Cria um só ficheiro com todos os dias que ainda faltam. Abra-o e o calendário do telemóvel avisa antes de cada chapa, mesmo com a app fechada.</p>
+  </section>
+  </div>
+
+  <div class="pane" id="pane-ajustes" role="tabpanel" aria-labelledby="tab-ajustes" hidden>
+  <!-- DADOS -->
+  <section class="card" id="cardDados">
+    <div class="dados-top">
+      <h2>Os seus dados</h2>
+      <p class="dados-estado" id="dadosEstado"></p>
+    </div>
+    <p class="dados-ts" id="dadosTs"></p>
+    <p class="dados-aviso" id="dadosAviso" hidden>Este navegador não deixa guardar nada, por isso tudo se perde ao fechar. Guarde uma cópia antes de sair.</p>
+    <p class="note" id="dadosNota">Os registos ficam no telemóvel, não numa nuvem. Se mudar de telemóvel ou limpar o navegador, precisa da cópia.</p>
+    <div class="nuvem" id="nuvemBox" hidden>
+      <div id="nuvemFora">
+        <p class="note" style="margin-top:0">Entre na sua conta para guardar tudo online. Assim nada se perde ao limpar o navegador ou trocar de telemóvel.</p>
+        <details id="nuvemCfgBox">
+          <summary class="note" style="cursor:pointer">Ligação ao Supabase</summary>
+          <label class="fld" for="supaUrl" style="margin-top:8px">Project URL</label>
+          <input id="supaUrl" type="url" placeholder="https://xxxx.supabase.co" autocomplete="off">
+          <label class="fld" for="supaKey" style="margin-top:8px">Chave anon public</label>
+          <input id="supaKey" type="text" placeholder="eyJ…" autocomplete="off">
+        </details>
+        <label class="fld" for="supaEmail" style="margin-top:10px">Email</label>
+        <input id="supaEmail" type="email" autocomplete="email">
+        <label class="fld" for="supaPass" style="margin-top:8px">Palavra-passe</label>
+        <input id="supaPass" type="password" autocomplete="current-password">
+        <div class="dados-btns">
+          <button class="btn" id="supaEntrar" type="button">Entrar</button>
+          <button class="btn btn-quiet" id="supaCriar" type="button">Criar conta</button>
+        </div>
+      </div>
+      <div id="nuvemDentro" hidden>
+        <p class="note" style="margin-top:0" id="nuvemQuem"></p>
+        <div class="dados-btns"><button class="btn btn-quiet" id="supaSair" type="button">Sair da conta</button></div>
+      </div>
+    </div>
+    <div class="dados-btns">
+      <button class="btn btn-quiet" id="btnExportar" type="button">Guardar cópia</button>
+      <button class="btn btn-quiet" id="btnImportar" type="button">Repor cópia</button>
+    </div>
+    <div class="perigo-linha">
+      <button class="btn-perigo" id="btnApagarTudo" type="button">Apagar tudo e recomeçar</button>
+    </div>
+    <input type="file" id="fileImport" accept="application/json,.json" hidden>
+  </section>
+
+  <!-- CARREGAR CHAPAS -->
+  <section class="card" id="cardUpload">
+    <div class="dados-top">
+      <h2>Carregar chapas</h2>
+      <p class="dados-estado" id="upContagem"></p>
+    </div>
+    <p class="note">Quando sair uma escala nova, carregue aqui o PDF das chapas. As chapas novas substituem logo as antigas; os dias já registados não mudam. Também aceita uma cópia de segurança da app (.json).</p>
+
+    <div class="dropzone" id="drop">
+      <input type="file" id="fileChapas" accept=".pdf,.json,application/pdf,application/json" hidden multiple>
+      <b>Escolher ficheiro</b>
+      <small>PDF das chapas ou cópia .json</small>
+    </div>
+
+    <p class="upstate" id="upEstado" hidden></p>
+    <div class="lista" id="minhasLista"></div>
+    <div class="perigo-linha" id="upAcoes" hidden>
+      <button class="btn-perigo" id="btnApagarCarregadas" type="button">Apagar as chapas carregadas</button>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <details>
+    <summary>Valores do recibo</summary>
+    <div class="sbody">
+      <div class="grid2">
+        <div class="fld-wrap"><label class="fld" for="cfg_vencBase">Vencimento base (€)</label>
+          <input type="number" step="0.01" id="cfg_vencBase"></div>
+        <div class="fld-wrap"><label class="fld" for="cfg_horasSemana">Horas por semana</label>
+          <input type="number" step="0.5" id="cfg_horasSemana"></div>
+      </div>
+      <p class="note" id="noteBase"></p>
+
+      <div class="sgroup">Subsídios</div>
+      <div class="grid2">
+        <div class="fld-wrap"><label class="fld" for="cfg_subsidio">Subsídio de refeição (€/dia)</label>
+          <input type="number" step="0.05" id="cfg_subsidio"></div>
+        <div class="fld-wrap"><label class="fld" for="cfg_noturno">Trabalho noturno (€/h)</label>
+          <input type="number" step="0.05" id="cfg_noturno"></div>
+        <div class="fld-wrap"><label class="fld" for="cfg_refPen">1.ª refeição penalizada (€)</label>
+          <input type="number" step="0.05" id="cfg_refPen"></div>
+      </div>
+
+      <label class="check check-flush">
+        <input type="checkbox" id="cfg_refeicaoAuto">
+        <span>Escolher a refeição sozinho pela hora da pausa (normal ou penalizada)</span></label>
+      <div class="grid2 grid2-top">
+        <div class="fld-wrap"><label class="fld" for="cfg_janelaAlmoco">Pausa de almoço entre</label>
+          <input type="text" inputmode="numeric" id="cfg_janelaAlmoco" placeholder="11:00 – 14:00"></div>
+        <div class="fld-wrap"><label class="fld" for="cfg_janelaJantar">Pausa de jantar entre</label>
+          <input type="text" inputmode="numeric" id="cfg_janelaJantar" placeholder="18:00 – 21:00"></div>
+      </div>
+
+      <div class="sgroup">Regra das horas a mais</div>
+      <label class="check check-flush">
+        <input type="checkbox" id="cfg_splitExtra">
+        <span>Horas acima do limite diário pagas à parte (1.ª hora a 50%, seguintes a 75%; nas folgas, como descanso complementar suplementar)</span></label>
+      <div class="grid2 grid2-top">
+        <div class="fld-wrap"><label class="fld" for="cfg_limiteDiario">Limite diário (horas)</label>
+          <input type="number" step="0.5" min="1" id="cfg_limiteDiario"></div>
+        <div class="fld-wrap"><label class="fld" for="cfg_limiteDescanso">Descanso mínimo entre dias (horas)</label>
+          <input type="number" step="0.5" min="0" id="cfg_limiteDescanso"></div>
+      </div>
+
+      <div class="sgroup">Descontos mensais</div>
+      <div class="grid2">
+        <div class="fld-wrap"><label class="fld" for="cfg_ss">Segurança Social (%)</label>
+          <input type="number" step="0.1" min="0" id="cfg_ss"></div>
+        <div class="fld-wrap"><label class="fld" for="cfg_irs">Retenção de IRS (%)</label>
+          <input type="number" step="0.1" min="0" id="cfg_irs"></div>
+        <div class="fld-wrap"><label class="fld" for="cfg_outros">Outros descontos (€/mês)</label>
+          <input type="number" step="0.01" min="0" id="cfg_outros"></div>
+      </div>
+      <label class="check check-flush">
+        <input type="checkbox" id="cfg_subIsento">
+        <span>Subsídio de refeição isento de descontos</span></label>
+      <label class="check check-flush">
+        <input type="checkbox" id="cfg_irsAuto">
+        <span>IRS automático (tabelas de retenção 2026, Continente)</span></label>
+      <div class="grid2 grid2-top">
+        <div class="fld-wrap"><label class="fld" for="cfg_irsTabela">Situação</label>
+          <select id="cfg_irsTabela">
+            <option value="I">Casado, dois titulares / não casado sem dependentes</option>
+            <option value="II">Não casado com dependentes</option>
+            <option value="III">Casado, único titular</option>
+          </select></div>
+        <div class="fld-wrap"><label class="fld" for="cfg_dependentes">Dependentes</label>
+          <input type="number" step="1" min="0" id="cfg_dependentes"></div>
+      </div>
+      <p class="note">Com o IRS automático, a app usa a tabela oficial e retém à parte o vencimento e as horas do mês anterior, como no recibo. É uma estimativa: pode ficar alguns euros acima ou abaixo. Desligue para escrever a percentagem à mão.</p>
+
+      <div class="sgroup">Valor/hora por rubrica</div>
+      <label class="check check-flush">
+        <input type="checkbox" id="cfg_taxasAuto">
+        <span>Calcular sozinho a partir do vencimento base (só precisa do vencimento base)</span></label>
+      <div class="grid2" id="rubricaInputs"></div>
+
+      <p class="note">Com o cálculo automático ligado, basta pôr o vencimento base lá em cima: os valores por hora seguem as mesmas proporções do recibo. Desligue para escrever valores à mão.</p>
+    </div>
+  </details>
+  </div>
+
+  <footer>Ferramenta de apoio pessoal. Não substitui o recibo de vencimento oficial.</footer>
+
+  <nav class="tabbar" role="tablist" aria-label="Secções">
+    <button type="button" role="tab" data-pane="chapa" aria-selected="true" aria-controls="pane-chapa">
+      <span class="tb-ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <rect x="3.5" y="4.5" width="17" height="15" rx="2"/>
+          <path d="M3.5 9.5h17M8 4.5v-2M16 4.5v-2M7.5 13.5h5"/>
+        </svg></span>
+      <span class="tb-txt">Chapa</span>
+    </button>
+    <button type="button" role="tab" data-pane="mes" aria-selected="false" aria-controls="pane-mes">
+      <span class="tb-ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M4 19.5V11M9.3 19.5V6M14.7 19.5v-5.5M20 19.5V8.5"/>
+        </svg></span>
+      <span class="tb-txt">Mês</span>
+    </button>
+    <button type="button" role="tab" data-pane="ajustes" aria-selected="false" aria-controls="pane-ajustes">
+      <span class="tb-ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M5 7h14M5 12h14M5 17h14"/>
+          <circle cx="9" cy="7" r="2.1" fill="var(--page)"/>
+          <circle cx="15" cy="12" r="2.1" fill="var(--page)"/>
+          <circle cx="8" cy="17" r="2.1" fill="var(--page)"/>
+        </svg></span>
+      <span class="tb-txt">Ajustes</span>
+    </button>
+  </nav>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ============ DADOS DAS CHAPAS ============ */
+const dadosChapas = {util:{}, sabado:{}, domingo:{}};
+
+const NOME_DIA = {util:'Dia útil', sabado:'Sábado', domingo:'Domingo'};
+
+const RUBRICAS = [
+  {id:'extraD75',     nome:'Hora extra dia — 75%',        def:11.90},
+  {id:'extraN75',     nome:'Hora extra noite — 75%',      def:14.87},
+  {id:'extraD50',     nome:'Hora extra dia — 50%',        def:10.20},
+  {id:'extraN50',     nome:'Hora extra noite — 50%',      def:12.75},
+  {id:'descComplD',   nome:'Descanso complementar dia',   def:9.82},
+  {id:'descComplN',   nome:'Descanso complementar noite', def:12.27},
+  {id:'descSupD',     nome:'Descanso complementar, horas além das 8h — dia',   def:14.73, sel:false},
+  {id:'descSupN',     nome:'Descanso complementar, horas além das 8h — noite', def:18.41, sel:false},
+  {id:'redDescanso',  nome:'Redução do tempo de descanso',  def:4.91, sel:false},
+  {id:'folgaVendD',   nome:'Folga vendida — dia',         def:11.90, taxa:false},
+  {id:'folgaVendN',   nome:'Folga vendida — noite',       def:14.87, taxa:false},
+  {id:'feriadoD',     nome:'Feriado dia',                 def:9.82},
+  {id:'feriadoSuplD', nome:'Feriado suplementar dia',     def:14.74},
+  {id:'feriadoSuplN', nome:'Feriado suplementar noite',   def:18.42}
+];
+const PAR_NOITE = {extraD75:'extraN75', extraD50:'extraN50', descComplD:'descComplN', folgaVendD:'folgaVendN', feriadoSuplD:'feriadoSuplN'};
+const PAR_DIA = Object.fromEntries(Object.entries(PAR_NOITE).map(([d,n])=>[n,d]));
+const RUB_NORMAL = {id:'normal', nome:'Serviço normal — pago no vencimento base'};
+/* Como a empresa paga cada rubrica (confirmado com o recibo de setembro 2026):
+   - serviço normal e feriado: horas além das 8h — 1.ª hora a 50%, seguintes a 75%,
+     com preço de noite para os minutos entre as 20:00 e as 07:00;
+     suplemento noturno (1,70 €/h) só nas horas noturnas dentro das 8h.
+   - folga trabalhada/vendida: 8h a "descanso complementar" (dia/noite) e o
+     resto a "descanso complementar suplementar" (dia/noite).
+   - fora da escala / feriado suplementar: todas as horas à taxa da rubrica. */
+const familia = id =>
+  id === 'normal' ? 'normal'
+  : id === 'feriadoD' ? 'feriado'
+  : /^(descCompl|folgaVend)/.test(id) ? 'descanso'
+  : /^extra[DN]75$/.test(id) ? 'fora'
+  : /^feriadoSupl/.test(id) ? 'feriadoSupl' : 'normal';
+/* Valores automáticos: cada rubrica é um múltiplo do valor/hora base
+   (vencimento × 12 ÷ (52 × horas semanais)). Os fatores foram tirados do
+   recibo real (base 1.178,49 € → 6,799 €/h), por isso quem só põe o
+   vencimento base fica com os mesmos preços que a empresa usa. */
+const H_REF = 1178.49 * 12 / (52 * 40);
+const FATORES = {
+  extraD50: 1.5, extraN50: 1.875, extraD75: 1.75, extraN75: 2.1875, noturno: 0.25,
+  descComplD: 9.82 / H_REF, descComplN: 12.27 / H_REF,
+  descSupD: 14.73 / H_REF,  descSupN: 18.41 / H_REF,
+  redDescanso: 4.91 / H_REF, feriadoD: 9.82 / H_REF,
+  feriadoSuplD: 14.74 / H_REF, feriadoSuplN: 18.42 / H_REF
+};
+/* Refeição automática: se a pausa da chapa começa dentro da hora do almoço
+   ou do jantar, é subsídio normal; se começa fora (muito cedo ou muito
+   tarde), é "1.ª refeição penalizada", que substitui o subsídio desse dia. */
+function janela(txt){
+  try { const p = String(txt).split(/\s*[–—-]\s*/); return [toMin(p[0]), toMin(p[1])]; } catch(e){ return null; }
+}
+function refeicaoPenalizada(sp){
+  if (!sp) return false;
+  const ini = sp.a % 1440;
+  const dentro = j => j && ini >= j[0] && ini <= j[1];
+  return !(dentro(janela(cfg.janelaAlmoco)) || dentro(janela(cfg.janelaJantar)));
+}
+function refeicaoAuto(){
+  const nota = $('notaRefeicao');
+  if (!cfg.refeicaoAuto || !atual){ if (nota) nota.textContent = ''; return; }
+  const pen = refeicaoPenalizada(atual.temP2 ? atual.sp : null);
+  $('ckSub').checked = !pen;
+  $('ckRefPen').checked = pen;
+  if (nota) nota.textContent = !atual.temP2
+    ? 'Sem pausa: conta o subsídio de refeição normal.'
+    : pen ? `Pausa às ${fmtHora(atual.sp.a)}, fora da hora das refeições: conta como 1.ª refeição penalizada.`
+          : `Pausa às ${fmtHora(atual.sp.a)}: subsídio de refeição normal.`;
+  recalcular();
+}
+/* IRS automático: tabelas de retenção na fonte 2026, Continente (trabalho dependente).
+   O processamento salarial retém à parte o vencimento do mês e os variáveis
+   do mês anterior (horas extra, folgas…), cada um com a sua taxa. */
+const IRS_2026 = {
+  I:   {dep:21.43, esc:[[920,0,0],[1042,.125,R=>.125*2.6*(1273.85-R)],[1108,.157,R=>.157*1.35*(1554.83-R)],[1154,.157,94.71],[1212,.212,158.18],[1819,.241,193.33],[2119,.311,320.66],[2499,.349,401.19],[3305,.3836,487.66],[5547,.3969,531.62],[20221,.4495,823.40],[Infinity,.4717,1272.31]]},
+  II:  {dep:34.29, esc:[[920,0,0],[1042,.125,R=>.125*2.6*(1273.85-R)],[1108,.157,R=>.157*1.35*(1554.83-R)],[1154,.157,94.71],[1212,.212,158.18],[1819,.241,193.33],[2119,.311,320.66],[2499,.349,401.19],[3305,.3836,487.66],[5547,.3969,531.62],[20221,.4495,823.40],[Infinity,.4717,1272.31]]},
+  III: {dep:42.86, esc:[[991,0,0],[1042,.125,R=>.125*2.6*(1372.15-R)],[1108,.125,R=>.125*1.35*(1677.85-R)],[1119,.125,96.17],[1432,.1272,98.64],[1962,.157,141.32],[2240,.1938,213.53],[2773,.2277,289.47],[3389,.257,370.72],[5965,.2881,476.12],[20265,.3843,1049.96],[Infinity,.4717,2821.13]]}
+};
+function retencaoIRS(R, dependentes){
+  const t = IRS_2026[cfg.irsTabela] || IRS_2026.I;
+  if (R <= 0) return 0;
+  const e = t.esc.find(x => R <= x[0]);
+  const parcela = typeof e[2] === 'function' ? e[2](R) : e[2];
+  return Math.max(0, R * e[1] - parcela - t.dep * (dependentes || 0));
+}
+function aplicarTaxasAuto(){
+  if (!cfg.taxasAuto) return;
+  const h = valorHoraBase();
+  Object.entries(FATORES).forEach(([k, f]) => { cfg[k] = Math.round(h * f * 100) / 100; });
+}
+const RUB_SEL = RUBRICAS.filter(r => r.sel !== false);
+const RUB_TAXA = RUBRICAS.filter(r => r.taxa !== false);
+const taxaMostrada = id => familia(id) === 'descanso' ? cfg[id.endsWith('N') ? 'descComplN' : 'descComplD'] : cfg[id];
+const nomeRubrica = id => id === 'normal' ? 'Serviço normal' : (RUBRICAS.find(r => r.id === id) || {nome:'—'}).nome;
+
+const CFG_DEFAULT = {versao:5, irsAuto:true, irsTabela:'I', dependentes:0, taxasAuto:true, refeicaoAuto:true, janelaAlmoco:'11:00 – 14:00', janelaJantar:'18:00 – 21:00', limiteDescanso:11, vencBase:0, horasSemana:40, subsidio:7.20, noturno:1.70, refPen:7.45, limiteDiario:8, splitExtra:true, ss:11, irs:0, outros:0, subIsento:true};
+RUBRICAS.forEach(r => CFG_DEFAULT[r.id] = r.def);
+
+const K_CFG = 'chapas-config', K_REG = 'chapas-registos', K_TS = 'chapas-guardado', K_MINHAS = 'chapas-minhas';
+const NOITE_INI = 20*60, NOITE_FIM = 7*60;
+const EIXO_INI = 4*60, EIXO_FIM = 30.5*60;
+
+let cfg = {...CFG_DEFAULT};
+let registos = [];
+let diaSel = 'util';
+let atual = null;          // chapa calculada
+let mesSel = null;         // 'YYYY-MM'
+let rubricaManual = false; // utilizador escolheu rubrica à mão nesta consulta
+let escalaDia = 'trabalho';
+let naEscala = true;
+
+/* ============ ESCALA → RUBRICA ============ */
+function aplicarGuia(){
+  if (!atual) return;
+  let id;
+  if (escalaDia === 'trabalho')      id = naEscala ? 'normal' : 'extraD75';
+  else if (escalaDia === 'folga')    id = 'descComplD';
+  else if (escalaDia === 'folgaVend')id = 'folgaVendD';
+  else                               id = naEscala ? 'feriadoD' : 'feriadoSuplD';
+
+  if (atual.noite > atual.minutos/2 && PAR_NOITE[id]) id = PAR_NOITE[id];
+
+  $('rubricaSelect').value = id;
+  rubricaManual = false;
+  pintarGuia();
+  recalcular();
+}
+function pintarGuia(){
+  const folga = escalaDia.startsWith('folga');
+  $('guia').classList.toggle('na', folga);
+  $('qAtrib').textContent = folga
+    ? 'Em folga, qualquer chapa é trabalho a mais'
+    : 'A chapa já estava atribuída a si?';
+  $('gAtrib').querySelectorAll('button').forEach(b => b.disabled = folga);
+
+  const nota = {
+    normal:       'Horas da escala: pagas pelo vencimento base, com os subsídios à parte.',
+    extra:        'Trabalho para além do que a escala previa nesse dia.',
+    descCompl:    'Chapa feita em folga, com dia de descanso a gozar depois.',
+    folgaVend:    'Folga vendida: abdicou do dia compensatório, pago a 75%.',
+    feriado:      'Feriado que já era dia de trabalho na escala.',
+    feriadoSupl:  'Feriado que era dia de folga, ou trabalho a mais no feriado.'
+  };
+  const id = $('rubricaSelect').value;
+  $('guiaNota').textContent =
+    id === 'normal' ? nota.normal :
+    id.startsWith('extra') ? nota.extra :
+    id.startsWith('descCompl') ? nota.descCompl :
+    id.startsWith('folgaVend') ? nota.folgaVend :
+    id.startsWith('feriadoSupl') ? nota.feriadoSupl : nota.feriado;
+}
+
+const $ = id => document.getElementById(id);
+const eur = v => new Intl.NumberFormat('pt-PT',{style:'currency',currency:'EUR'}).format(v||0);
+const hm  = m => `${Math.floor(m/60)}h ${String(Math.round(m%60)).padStart(2,'0')}m`;
+
+/* ============ TEMPO ============ */
+function toMin(s){ const [h,m] = s.trim().split(':').map(Number); return h*60+m; }
+function span(txt){
+  const p = txt.split(/\s*[–—-]\s*/);
+  let a = toMin(p[0]), b = toMin(p[1]);
+  if (b < a) b += 1440;
+  return {a, b, dur: b-a};
+}
+function minutosNoite(a, b){
+  let t = 0;
+  for (let d = -1; d <= 2; d++){
+    const ns = d*1440 + NOITE_INI;
+    const ne = d*1440 + 1440 + NOITE_FIM;
+    t += Math.max(0, Math.min(b, ne) - Math.max(a, ns));
+  }
+  return t;
+}
+function pct(t){ return ((t - EIXO_INI) / (EIXO_FIM - EIXO_INI)) * 100; }
+/* blocos de trabalho de uma chapa (a 2.ª parte pode não existir) */
+function blocosDe(c){
+  const b = [span(c.p1)];
+  if (c.p2) b.push(span(c.p2));
+  return b;
+}
+
+/* ============ ARMAZENAMENTO ============ */
+/* Camadas, pela ordem em que se tenta:
+   1. localStorage  — quando o ficheiro está aberto no navegador do telemóvel
+   2. window.storage — quando corre dentro do Claude
+   3. memória        — último recurso; perde-se ao fechar             */
+const Store = {
+  modo: 'memoria', mem: {}, _ls: null, db: null, uid: null, _nuvem: null,
+  temLS(){
+    if (this._ls !== null) return this._ls;
+    try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); this._ls = true; }
+    catch(e){ this._ls = false; }
+    return this._ls;
+  },
+  temWS(){ return typeof window !== 'undefined' && !!window.storage; },
+  /* Nuvem: base de dados privada da conta Claude (data/users/<id>/).
+     Não se perde ao limpar o histórico nem ao trocar de telemóvel. */
+  ligarNuvem(){
+    if (this._nuvem) return this._nuvem;
+    this._nuvem = (async () => {
+      try {
+        if (!window.claude || typeof window.claude.use !== 'function') return false;
+        const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+        if (!db || !user) return false;
+        const id = await user.id();
+        if (!id) return false;
+        this.db = db; this.uid = id;
+        return true;
+      } catch(e){ return false; }
+    })();
+    return this._nuvem;
+  },
+  temNuvem(){ return !!(this.db && this.uid); },
+  /* Supabase: a nuvem própria da versão instalada (Netlify). */
+  supa: null, supaUser: null,
+  supaCfg(){
+    try { return JSON.parse(localStorage.getItem('chapas-supa') || 'null'); } catch(e){ return null; }
+  },
+  async ligarSupa(){
+    const cfg = this.supaCfg();
+    if (!cfg || !cfg.url || !cfg.key || !window.supabase) return false;
+    try {
+      this.supa = window.supabase.createClient(cfg.url, cfg.key, {auth:{persistSession:true, autoRefreshToken:true}});
+      const {data} = await this.supa.auth.getSession();
+      this.supaUser = data && data.session ? data.session.user : null;
+      return !!this.supaUser;
+    } catch(e){ this.supa = null; return false; }
+  },
+  temSupa(){ return !!(this.supa && this.supaUser); },
+  /* Gravações que falharam sem rede ficam marcadas e sobem na próxima vez. */
+  _pend(){ try { return JSON.parse(localStorage.getItem('chapas-pendentes') || '[]'); } catch(e){ return []; } },
+  _marcar(k, on){
+    const p = new Set(this._pend()); on ? p.add(k) : p.delete(k);
+    try { localStorage.setItem('chapas-pendentes', JSON.stringify([...p])); } catch(e){}
+  },
+  async _lerSupa(k){
+    const {data, error} = await this.supa.from('kv').select('v').eq('k', k).maybeSingle();
+    if (error) throw error;
+    return data ? data.v : null;
+  },
+  async _escreverSupa(k, v){
+    const {error} = await this.supa.from('kv').upsert({user_id: this.supaUser.id, k, v, updated_at: new Date().toISOString()});
+    if (error) throw error;
+  },
+  /* um documento por chave em data/users/<id> (caminho de documento válido) */
+  _ref(k){ return this.db.doc(`data/users/${this.uid}/${k}`); },
+  _refAntigo(k){ return this.db.doc(`data/users/${this.uid}/chapas/${k}`); },
+  async _lerNuvem(k){
+    let s0 = await this._ref(k).get();
+    if (!s0.exists){
+      // versões antigas gravavam noutro caminho; se lá houver dados, usa-os
+      try { const v = await this._refAntigo(k).get(); if (v && v.exists && !String(k).includes('__')) s0 = v; } catch(e){}
+    }
+    if (!s0.exists) return null;
+    const d = s0.data();
+    if (typeof d.v === 'string' && !d.partes) return d.v;
+    let txt = d.v || '';
+    for (let i = 1; i < (d.partes || 1); i++){
+      const si = await this._ref(`${k}__${i}`).get();
+      txt += si.exists ? (si.data().v || '') : '';
+    }
+    return txt;
+  },
+  async _escreverNuvem(k, v){
+    const T = 180000, partes = Math.max(1, Math.ceil(v.length / T));
+    for (let i = partes - 1; i >= 1; i--) await this._ref(`${k}__${i}`).set({v: v.slice(i*T, (i+1)*T)});
+    await this._ref(k).set({v: v.slice(0, T), partes, em: new Date().toISOString()});
+  },
+  async iniciar(){
+    await this.ligarNuvem();
+    if (!this.temNuvem()) await this.ligarSupa();
+    this.modo = this.temNuvem() ? 'nuvem' : this.temSupa() ? 'supa' : this.temLS() ? 'local' : this.temWS() ? 'claude' : 'memoria';
+    return this.modo;
+  },
+  async ler(k){
+    if (this.temNuvem()){
+      try {
+        const v = await this._lerNuvem(k);
+        if (v != null){ if (this.temLS()) try { localStorage.setItem(k, v); } catch(e){}; return v; }
+        // primeira vez na nuvem: sobe o que já estava neste telemóvel
+        if (this.temLS()){ const loc = localStorage.getItem(k); if (loc != null){ this._escreverNuvem(k, loc).catch(()=>{}); return loc; } }
+        return null;
+      } catch(e){}
+    }
+    if (this.temSupa()){
+      if (this.temLS() && this._pend().includes(k)){
+        const loc = localStorage.getItem(k);
+        if (loc != null){ this._escreverSupa(k, loc).then(() => this._marcar(k, false)).catch(()=>{}); return loc; }
+      }
+      try {
+        const v = await this._lerSupa(k);
+        if (v != null){ if (this.temLS()) try { localStorage.setItem(k, v); } catch(e){}; return v; }
+        if (this.temLS()){ const loc = localStorage.getItem(k); if (loc != null){ this._escreverSupa(k, loc).catch(()=>{}); return loc; } }
+        return null;
+      } catch(e){}
+    }
+    if (this.temLS()){ const v = localStorage.getItem(k); if (v != null) return v; }
+    if (this.temWS()){ try { const r = await window.storage.get(k); if (r && r.value != null) return r.value; } catch(e){} }
+    return this.mem[k] != null ? this.mem[k] : null;
+  },
+  async escrever(k, v){
+    let ok = false;
+    const online = this.temNuvem() || this.temSupa();
+    if (this.temNuvem()){ try { await this._escreverNuvem(k, v); ok = true; } catch(e){} }
+    else if (this.temSupa()){
+      try { await this._escreverSupa(k, v); ok = true; this._marcar(k, false); }
+      catch(e){ this._marcar(k, true); }
+    }
+    if (this.temLS()){ try { localStorage.setItem(k, v); ok = ok || !online || this.temSupa(); } catch(e){} }
+    if (!this.temNuvem() && this.temWS()){ try { await window.storage.set(k, v); ok = true; } catch(e){} }
+    this.mem[k] = v;
+    return ok;
+  },
+  async apagar(k){
+    if (this.temNuvem()){ try { await this._ref(k).delete(); } catch(e){} }
+    if (this.temSupa()){ try { await this.supa.from('kv').delete().eq('k', k); } catch(e){} }
+    if (this.temLS()){ try { localStorage.removeItem(k); } catch(e){} }
+    if (this.temWS()){ try { await window.storage.delete(k); } catch(e){} }
+    delete this.mem[k];
+  }
+};
+
+async function carregar(){
+  await Store.iniciar();
+  const c = await Store.ler(K_CFG);
+  if (c){
+    try { cfg = {...CFG_DEFAULT, ...JSON.parse(c)}; } catch(e){}
+    // folga vendida arrancou com os valores do descanso complementar; passou a 75%
+    if ((cfg.versao || 1) < 2){
+      if (cfg.folgaVendD === 9.82)  cfg.folgaVendD = 11.90;
+      if (cfg.folgaVendN === 12.28) cfg.folgaVendN = 14.87;
+      cfg.versao = 2;
+      gravarCfg();
+    }
+    // regras acertadas com o recibo de setembro 2026
+    if (cfg.versao < 3){
+      if (cfg.descComplN === 12.28) cfg.descComplN = 12.27;
+      cfg.versao = 3;
+      gravarCfg();
+    }
+    // valores por hora passam a sair do vencimento base (semana de 40h, como no recibo)
+    if (cfg.versao < 4){
+      if (cfg.horasSemana === 35) cfg.horasSemana = 40;
+      cfg.taxasAuto = true;
+      cfg.versao = 4;
+    }
+    if (cfg.versao < 5){
+      cfg.irsAuto = true;
+      cfg.versao = 5;
+      gravarCfg();
+    }
+  }
+  aplicarTaxasAuto();
+  const r = await Store.ler(K_REG);
+  if (r){ try { registos = JSON.parse(r) || []; } catch(e){ registos = []; } }
+}
+async function gravarCfg(){
+  const ok = await Store.escrever(K_CFG, JSON.stringify(cfg));
+  if (!ok) toast('Não foi possível guardar os valores');
+  marcarGravacao(ok);
+}
+async function gravarReg(){
+  const ok = await Store.escrever(K_REG, JSON.stringify(registos));
+  if (!ok) toast('Não foi possível guardar o registo');
+  marcarGravacao(ok);
+}
+async function marcarGravacao(ok){
+  if (ok) await Store.escrever(K_TS, new Date().toISOString());
+  pintarDados();
+}
+
+/* ---- cópia de segurança ---- */
+function pacote(){
+  return JSON.stringify({app:'chapas-vencimento', versao:3, exportado:new Date().toISOString(), cfg, registos, minhas}, null, 2);
+}
+function nomeFicheiro(){
+  const d = new Date(), p = n => String(n).padStart(2,'0');
+  return `chapas-${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}.json`;
+}
+async function guardarFicheiro(nome, dados, tipo){
+  try {
+    if (window.claude && typeof window.claude.use === 'function'){
+      const dl = await window.claude.use('downloads');
+      if (dl){ await dl.save({filename: nome, data: new Blob([dados], {type: tipo})}); return true; }
+    }
+  } catch(e){ if (e && e.code === 'declined') return false; }
+  const url = URL.createObjectURL(new Blob([dados], {type: tipo}));
+  const el = document.createElement('a');
+  el.href = url; el.download = nome; document.body.appendChild(el); el.click(); el.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  return true;
+}
+async function exportar(){
+  const txt = pacote();
+  if (window.claude){
+    if (await guardarFicheiro(nomeFicheiro(), txt, 'application/json')) toast('Cópia guardada');
+    return;
+  }
+  try {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([txt], {type:'application/json'}));
+    a.download = nomeFicheiro();
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast('Cópia guardada nas transferências');
+  } catch(e){
+    try { navigator.clipboard.writeText(txt); toast('Cópia copiada para a área de transferência'); }
+    catch(e2){ toast('Não foi possível criar a cópia'); }
+  }
+}
+async function importar(txt){
+  let d;
+  try { d = JSON.parse(txt); } catch(e){ toast('Ficheiro inválido'); return; }
+  if (!d || !Array.isArray(d.registos)){ toast('Não parece uma cópia das chapas'); return; }
+  const porId = {};
+  registos.forEach(r => porId[r.id] = r);
+  d.registos.forEach(r => { if (r && r.id) porId[r.id] = r; });   // a cópia manda nos repetidos
+  registos = Object.values(porId).sort((a,b) => a.data < b.data ? 1 : -1);
+  if (d.cfg) cfg = {...CFG_DEFAULT, ...d.cfg};
+  if (d.minhas){
+    ['util','sabado','domingo'].forEach(t => {
+      minhas[t] = {...(minhas[t] || {}), ...(d.minhas[t] || {})};
+    });
+    await gravarMinhas();
+    fundirMinhas();
+    pintarMinhas(); montarDatalist(); montarLista();
+  }
+  await gravarReg(); await gravarCfg();
+  recarregarCampos(); montarSelect(); pintarMontantes(); pintarMes();
+  toast(`${d.registos.length} registos repostos`);
+}
+function recarregarCampos(){
+  ['vencBase','horasSemana','subsidio','noturno','refPen','limiteDiario','limiteDescanso','ss','irs','outros', ...RUB_TAXA.map(r=>r.id)]
+    .forEach(k => { const el = $('cfg_'+k); if (el) el.value = cfg[k]; });
+  const sw = $('cfg_splitExtra'); if (sw) sw.checked = !!cfg.splitExtra;
+  const si = $('cfg_subIsento');  if (si) si.checked = !!cfg.subIsento;
+  const ta = $('cfg_taxasAuto'); if (ta) ta.checked = !!cfg.taxasAuto;
+  const ra = $('cfg_refeicaoAuto'); if (ra) ra.checked = !!cfg.refeicaoAuto;
+  const ia = $('cfg_irsAuto'); if (ia){ ia.checked = !!cfg.irsAuto; $('cfg_irs').readOnly = !!cfg.irsAuto; }
+  const it = $('cfg_irsTabela'); if (it) it.value = cfg.irsTabela || 'I';
+  const idp = $('cfg_dependentes'); if (idp) idp.value = cfg.dependentes || 0;
+  ['janelaAlmoco','janelaJantar'].forEach(k => { const el = $('cfg_'+k); if (el) el.value = cfg[k]; });
+  Object.keys(FATORES).forEach(k => { const el = $('cfg_'+k); if (el) el.readOnly = !!cfg.taxasAuto; });
+  notaBase();
+}
+function pintarDados(){
+  const el = $('dadosEstado');
+  if (!el) return;
+  const onde = {
+    local:   'Guardado neste telemóvel',
+    nuvem:   'Guardado na sua conta Claude',
+    supa:    'Guardado online na sua conta',
+    claude:  'Guardado na sua conta',
+    memoria: 'Nada está a ser guardado'
+  }[Store.modo];
+  const n = registos.length;
+  const quantos = n === 0 ? 'sem registos ainda' : n === 1 ? '1 dia registado' : `${n} dias registados`;
+  el.innerHTML = `<b>${onde}</b><br>${quantos}`;
+  const av = $('dadosAviso');
+  if (av) av.hidden = Store.modo !== 'memoria';
+  const nota = $('dadosNota');
+  if (nota && Store.modo === 'supa')
+    nota.textContent = 'Os dias, a escala e as chapas ficam guardados online. Limpar o navegador ou trocar de telemóvel não apaga nada: basta voltar a entrar.';
+  if (nota && Store.modo === 'nuvem')
+    nota.textContent = 'Os dias e as chapas ficam guardados na sua conta Claude. Limpar o histórico do navegador ou trocar de telemóvel não apaga nada. A cópia continua útil como segurança extra.';
+  const ts = $('dadosTs');
+  if (ts) Store.ler(K_TS).then(v => {
+    if (!v){ ts.textContent = ''; return; }
+    const d = new Date(v), p = n => String(n).padStart(2,'0');
+    const hoje = new Date().toDateString() === d.toDateString();
+    ts.textContent = hoje
+      ? `Última gravação hoje às ${p(d.getHours())}:${p(d.getMinutes())}`
+      : `Última gravação a ${p(d.getDate())}/${p(d.getMonth()+1)} às ${p(d.getHours())}:${p(d.getMinutes())}`;
+  });
+}
+
+/* ============ AS MINHAS CHAPAS ============ */
+let minhas = {};          // { util:{num:obj}, sabado:{}, domingo:{} }
+let aEditar = null;       // {tipo, num} quando se está a alterar uma existente
+
+function minhasVazias(){ return {util:{}, sabado:{}, domingo:{}}; }
+
+async function carregarMinhas(){
+  const r = await Store.ler(K_MINHAS);
+  if (r){ try { minhas = {...minhasVazias(), ...JSON.parse(r)}; } catch(e){ minhas = minhasVazias(); } }
+  else minhas = minhasVazias();
+  fundirMinhas();
+}
+async function gravarMinhas(){
+  const ok = await Store.escrever(K_MINHAS, JSON.stringify(minhas));
+  if (!ok) toast('Não foi possível guardar a chapa');
+  marcarGravacao(ok);
+}
+/* junta as chapas do utilizador à base; as dele mandam se houver número repetido */
+/* A escala carregada substitui a de origem: se houver chapas carregadas
+   para um tipo de dia, só essas aparecem. Os dias já registados guardam
+   as suas próprias horas e não mudam. */
+let CHAPAS_BASE = null;
+function fundirMinhas(){
+  if (!CHAPAS_BASE) CHAPAS_BASE = JSON.parse(JSON.stringify(dadosChapas));
+  ['util','sabado','domingo'].forEach(t => {
+    const mine = minhas[t] || {};
+    const temMinhas = Object.keys(mine).length > 0;
+    Object.keys(dadosChapas[t]).forEach(n => delete dadosChapas[t][n]);
+    if (!temMinhas) Object.assign(dadosChapas[t], JSON.parse(JSON.stringify(CHAPAS_BASE[t])));
+    Object.entries(mine).forEach(([n, v]) => { dadosChapas[t][n] = {...v, minha:true}; });
+  });
+}
+const ehMinha = (t, n) => !!(minhas[t] && minhas[t][n]);
+
+/* ---- leitura do PDF das chapas ---- */
+const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs';
+const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs';
+let pdfjsLib = null;
+
+async function carregarPdfjs(){
+  if (pdfjsLib) return pdfjsLib;
+  pdfjsLib = await import(PDFJS_CDN);
+  pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+  return pdfjsLib;
+}
+
+/* texto de cada página, com as linhas reconstruídas pela posição */
+async function paginasDoPdf(buf){
+  const pdfjs = await carregarPdfjs();
+  const doc = await pdfjs.getDocument({data: new Uint8Array(buf)}).promise;
+  const out = [];
+  for (let i = 1; i <= doc.numPages; i++){
+    const c = await (await doc.getPage(i)).getTextContent();
+    const linhas = {};
+    c.items.forEach(it => {
+      if (!it.str.trim()) return;
+      const y = Math.round(it.transform[5]);
+      (linhas[y] = linhas[y] || []).push({x: it.transform[4], s: it.str});
+    });
+    out.push(Object.keys(linhas).map(Number).sort((a,b) => b-a)
+      .map(y => linhas[y].sort((a,b) => a.x-b.x).map(o => o.s).join(' ').replace(/\s+/g,' ').trim())
+      .join('\n'));
+  }
+  return out;
+}
+
+function lerChapasDeTexto(paginas){
+  const semAcento = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const out = [];
+  for (const pg of paginas){
+    const num = (pg.match(/Chapa\s+(\d{3,5})/) || [])[1];
+    if (!num) continue;
+    const per = n => {
+      const m = pg.match(new RegExp(n + '[º°]?\\s*Per[ií]odo:?\\s*(\\d{1,2}:\\d{2})\\s*[-–—]\\s*(\\d{1,2}:\\d{2})'));
+      return m ? [m[1], m[2]] : null;
+    };
+    const p1 = per('1'), p2 = per('2');
+    if (!p1) continue;
+
+    const dt = semAcento((pg.match(/Dia Tipo\s+(.*)/) || [,''])[1]);
+    const tipo = /sabado|sab\b/.test(dt) ? 'sabado'
+               : /domingo|dom\b|feriado/.test(dt) ? 'domingo' : 'util';
+
+    const carr = [];
+    let res = 0;
+    pg.split('\n').forEach(l => {
+      const m = l.match(/^(\d{3,4}(?:[_\-\s]?[A-Z])?)\s+\d+\s+\d{1,2}:\d{2}/);
+      if (m && m[1] !== '0'){
+        const cod = m[1].replace(/[_\-\s]/g, '');
+        if (!carr.includes(cod)) carr.push(cod);
+      }
+      if (/reserva/.test(semAcento(l))){
+        const t = l.match(/(\d{1,2}:\d{2})[^\d]+(\d{1,2}:\d{2})/);
+        if (t){
+          const mn = s => { const [hh,mm] = s.split(':').map(Number); return hh*60+mm; };
+          let d = mn(t[2]) - mn(t[1]);
+          if (d < 0) d += 1440;
+          res += d;
+        }
+      }
+    });
+
+    const c = {p1: `${p1[0]} – ${p1[1]}`};
+    if (p2){ c.pausa = `${p1[1]} – ${p2[0]}`; c.p2 = `${p2[0]} – ${p2[1]}`; }
+    c.reservas  = `${String(Math.floor(res/60)).padStart(2,'0')}h ${String(res%60).padStart(2,'0')}m`;
+    c.carreiras = carr.join(', ');
+    out.push({num, tipo, chapa: c});
+  }
+  return out;
+}
+
+function estado(txt, cls){
+  const el = $('upEstado');
+  el.hidden = false;
+  el.className = 'upstate' + (cls ? ' ' + cls : '');
+  el.innerHTML = txt;
+}
+
+async function receberFicheiros(lista){
+  const fich = Array.from(lista || []);
+  if (!fich.length) return;
+  let novas = 0, jsonOk = 0;
+  const lidasTodas = [];
+
+  for (const f of fich){
+    const nome = f.name.toLowerCase();
+    try {
+      if (nome.endsWith('.json')){
+        estado(`A ler ${f.name}…`);
+        await importar(await f.text());
+        jsonOk++;
+        continue;
+      }
+      if (!nome.endsWith('.pdf')){
+        estado(`<b>${f.name}</b> não é um PDF nem uma cópia .json.`, 'erro');
+        continue;
+      }
+      estado(`A ler ${f.name}… isto pode demorar alguns segundos.`);
+      const lidas = lerChapasDeTexto(await paginasDoPdf(await f.arrayBuffer()));
+      if (!lidas.length){
+        estado(`Não encontrei chapas em <b>${f.name}</b>. Confirme que é o PDF das chapas da sua zona, e não outro documento.`, 'erro');
+        continue;
+      }
+      lidasTodas.push(...lidas);
+    } catch(e){
+      const semRede = /fetch|network|import|Failed/i.test(String(e && e.message));
+      estado(semRede
+        ? 'Para ler um PDF é preciso internet só da primeira vez. Ligue-se à rede e tente outra vez.'
+        : `Não consegui ler <b>${f.name}</b>. Se for um PDF digitalizado (uma fotografia das folhas), não dá para ler o texto.`,
+        'erro');
+      return;
+    }
+  }
+
+  /* Escala nova: as chapas de cada tipo de dia que vem no PDF substituem
+     por inteiro as antigas desse tipo. Os dias já registados guardam as
+     suas próprias horas e não mudam. */
+  if (lidasTodas.length){
+    const NOMES = {util:'dia útil', sabado:'sábado', domingo:'domingo'};
+    const tipos = [...new Set(lidasTodas.map(x => x.tipo))];
+    let antigas = 0;
+    tipos.forEach(t => { antigas += Object.keys(minhas[t] || {}).length; minhas[t] = {}; });
+    lidasTodas.forEach(x => { minhas[x.tipo][x.num] = x.chapa; });
+    novas = tipos.reduce((s,t) => s + Object.keys(minhas[t]).length, 0);
+    await gravarMinhas();
+    fundirMinhas();
+    montarDatalist(); montarLista();
+    pintarEscala();
+    const quais = tipos.map(t => NOMES[t]).join(', ').replace(/, ([^,]*)$/, ' e $1');
+    estado(antigas
+      ? `Escala nova carregada: ${novas} chapas de ${quais}. As antigas foram substituídas. Os dias já registados ficaram como estavam.`
+      : `Pronto: ${novas} ${novas === 1 ? 'chapa' : 'chapas'} de ${quais}. Já aparecem na lista lá em cima.`, 'ok');
+  } else if (jsonOk){
+    estado('Cópia reposta.', 'ok');
+  }
+  pintarMinhas();
+}
+
+async function apagarCarregadas(){
+  const n = ['util','sabado','domingo'].reduce((s,t) => s + Object.keys(minhas[t] || {}).length, 0);
+  if (!n) return;
+  if (!confirm(`Apagar as ${n} chapas carregadas e voltar às originais da app?`)) return;
+  minhas = minhasVazias();
+  await gravarMinhas();
+  fundirMinhas();
+  montarDatalist(); montarLista(); pintarMinhas();
+  estado('Chapas carregadas apagadas. Ficaram as originais.', 'ok');
+}
+
+function pintarMinhas(){
+  const linhas = [];
+  ['util','sabado','domingo'].forEach(t => {
+    Object.entries(minhas[t] || {}).forEach(([n, c]) => {
+      const b = blocosDe(c);
+      linhas.push({t, n, serv: b.reduce((s,x) => s + x.dur, 0), ini: b[0].a, fim: b[b.length-1].b});
+    });
+  });
+  linhas.sort((a,b) => a.t === b.t ? a.n - b.n : a.t.localeCompare(b.t));
+
+  $('upContagem').textContent = linhas.length
+    ? `${linhas.length} ${linhas.length === 1 ? 'chapa carregada' : 'chapas carregadas'}` : '';
+  $('upAcoes').hidden = linhas.length === 0;
+  $('minhasLista').innerHTML = linhas.map(x => `
+    <div class="lrow">
+      <div><b>${x.n}</b> <span class="minha-tag">${NOME_DIA[x.t]}</span>
+        <small class="lrow-det">${fmtHora(x.ini)}–${fmtHora(x.fim)}, ${hm(x.serv)} de serviço</small>
+      </div>
+    </div>`).join('');
+}
+
+let toastT;
+function toast(txt){
+  const el = $('toast'); el.textContent = txt; el.classList.add('on');
+  clearTimeout(toastT); toastT = setTimeout(()=>el.classList.remove('on'), 2200);
+}
+
+/* ============ DEFINIÇÕES ============ */
+function montarDefinicoes(){
+  $('rubricaInputs').innerHTML = RUB_TAXA.map(r => `
+    <div class="fld-wrap">
+      <label class="fld" for="cfg_${r.id}">${r.nome} (€/h)</label>
+      <input type="number" step="0.01" id="cfg_${r.id}">
+    </div>`).join('');
+
+  ['vencBase','horasSemana','subsidio','noturno','refPen','limiteDiario','limiteDescanso','ss','irs','outros', ...RUB_TAXA.map(r=>r.id)].forEach(k => {
+    const el = $('cfg_'+k);
+    el.value = cfg[k];
+    el.addEventListener('change', () => {
+      const v = parseFloat(el.value);
+      cfg[k] = isNaN(v) ? 0 : v;
+      el.value = cfg[k];
+      if (k === 'vencBase' || k === 'horasSemana'){ aplicarTaxasAuto(); recarregarCampos(); }
+      gravarCfg(); montarSelect(); pintarMontantes(); recalcular(); pintarMes();
+    });
+  });
+  const sw = $('cfg_splitExtra');
+  sw.checked = !!cfg.splitExtra;
+  sw.addEventListener('change', () => {
+    cfg.splitExtra = sw.checked;
+    gravarCfg(); recalcular(); pintarMes();
+  });
+  const ia = $('cfg_irsAuto'), it = $('cfg_irsTabela'), idp = $('cfg_dependentes');
+  ia.checked = !!cfg.irsAuto; it.value = cfg.irsTabela || 'I'; idp.value = cfg.dependentes || 0;
+  $('cfg_irs').readOnly = !!cfg.irsAuto;
+  ia.addEventListener('change', () => { cfg.irsAuto = ia.checked; $('cfg_irs').readOnly = ia.checked; gravarCfg(); pintarMes(); });
+  it.addEventListener('change', () => { cfg.irsTabela = it.value; gravarCfg(); pintarMes(); });
+  idp.addEventListener('change', () => { cfg.dependentes = Math.max(0, parseInt(idp.value, 10) || 0); idp.value = cfg.dependentes; gravarCfg(); pintarMes(); });
+  const ra = $('cfg_refeicaoAuto');
+  ra.checked = !!cfg.refeicaoAuto;
+  ra.addEventListener('change', () => { cfg.refeicaoAuto = ra.checked; gravarCfg(); refeicaoAuto(); });
+  ['janelaAlmoco','janelaJantar'].forEach(k => {
+    const el = $('cfg_'+k);
+    el.value = cfg[k];
+    el.addEventListener('change', () => {
+      const j = janela(el.value);
+      if (!j || isNaN(j[0]) || isNaN(j[1])){ toast('Escreva assim: 11:00 – 14:00'); el.value = cfg[k]; return; }
+      cfg[k] = `${fmtHora(j[0])} – ${fmtHora(j[1])}`; el.value = cfg[k];
+      gravarCfg(); refeicaoAuto();
+    });
+  });
+  const ta = $('cfg_taxasAuto');
+  ta.checked = !!cfg.taxasAuto;
+  ta.addEventListener('change', () => {
+    cfg.taxasAuto = ta.checked;
+    aplicarTaxasAuto(); recarregarCampos();
+    gravarCfg(); montarSelect(); pintarMontantes(); recalcular(); pintarMes();
+  });
+  const si = $('cfg_subIsento');
+  si.checked = !!cfg.subIsento;
+  si.addEventListener('change', () => {
+    cfg.subIsento = si.checked;
+    gravarCfg(); pintarMes();
+  });
+  notaBase();
+}
+function valorHoraBase(){
+  const h = cfg.horasSemana > 0 ? cfg.horasSemana : 35;
+  return (cfg.vencBase * 12) / (52 * h);
+}
+function notaBase(){
+  $('noteBase').textContent = `Valor/hora base de referência: ${eur(valorHoraBase())} — (base × 12) ÷ (52 × horas semanais).`;
+}
+function montarSelect(){
+  const sel = $('rubricaSelect'), atualId = sel.value;
+  sel.innerHTML =
+    `<option value="normal">${RUB_NORMAL.nome}</option>` +
+    RUB_SEL.map(r => `<option value="${r.id}">${r.nome} — ${eur(taxaMostrada(r.id))}/h</option>`).join('');
+  sel.value = atualId || 'normal';
+}
+function pintarMontantes(){
+  $('amtSub').textContent = eur(cfg.subsidio);
+  $('amtRefPen').textContent = eur(cfg.refPen);
+  notaBase();
+}
+
+/* ============ CONSULTA ============ */
+function montarDatalist(){
+  $('chapaList').innerHTML = Object.keys(dadosChapas[diaSel]).map(c => `<option value="${c}">`).join('');
+}
+function montarLista(){
+  const lim = (cfg.limiteDiario || 8) * 60;
+  const arr = Object.entries(dadosChapas[diaSel]).map(([k,v]) => {
+    const b = blocosDe(v);
+    return {k, ini: b[0].a, fim: b[b.length-1].b, min: b.reduce((s,x) => s + x.dur, 0), minha: !!v.minha};
+  }).sort((a,b) => a.ini - b.ini);
+
+  const nm = arr.filter(x => x.minha).length;
+  $('listaContagem').textContent = nm
+    ? `${arr.length} em ${NOME_DIA[diaSel].toLowerCase()}, ${nm} carregadas por si`
+    : `${arr.length} em ${NOME_DIA[diaSel].toLowerCase()}`;
+  $('listaChapas').innerHTML = arr.map(x => `
+    <button type="button" class="lc${x.min > lim ? ' longa' : ''}" data-chapa="${x.k}">
+      <b>${x.k}${x.minha ? '<i class="dot" title="chapa sua"></i>' : ''}</b>
+      <span>${fmtHora(x.ini)} – ${fmtHora(x.fim)}${x.fim >= 1440 ? '<sup>+1</sup>' : ''}</span>
+      <em>${hm(x.min)}</em>
+    </button>`).join('');
+}
+function consultar(){
+  const num = $('chapaInput').value.trim();
+  const info = dadosChapas[diaSel][num];
+  const msg = $('msg');
+
+  if (!num){ msg.textContent = 'Escreva o número da chapa.'; msg.hidden = false; return; }
+  if (!info){
+    const lista = Object.keys(dadosChapas[diaSel]);
+    msg.textContent = lista.length
+      ? `A chapa ${num} não existe em ${NOME_DIA[diaSel].toLowerCase()}. Este dia vai da ${lista[0]} à ${lista[lista.length-1]}.`
+      : `Ainda não há chapas de ${NOME_DIA[diaSel].toLowerCase()}. Carregue o PDF das chapas da sua empresa em Ajustes → Carregar chapas.`;
+    msg.hidden = false; $('result').hidden = true; atual = null; return;
+  }
+  msg.hidden = true;
+
+  const s1 = span(info.p1);
+  const temP2 = !!info.p2;
+  const sp = temP2 ? span(info.pausa) : null;
+  const s2 = temP2 ? span(info.p2) : null;
+  const fim = temP2 ? s2.b : s1.b;
+  const minutos = s1.dur + (temP2 ? s2.dur : 0);
+  const noite = minutosNoite(s1.a, s1.b) + (temP2 ? minutosNoite(s2.a, s2.b) : 0);
+
+  atual = {chapa:num, dia:diaSel, minutos, noite, info, s1, sp, s2, fim, temP2};
+  rubricaManual = false;
+
+  $('rChapa').textContent = 'Chapa ' + num;
+  $('rDia').textContent = NOME_DIA[diaSel] + (info.minha ? ' (carregada por si)' : '');
+  $('rP1').textContent = info.p1;
+  $('rPausa').textContent = temP2 ? `${info.pausa}, ${hm(sp.dur)}` : 'sem pausa';
+  $('rP2').textContent = temP2 ? info.p2 : '—';
+  $('rTotal').textContent = hm(minutos);
+  $('rNoite').textContent = noite ? hm(noite) : '—';
+  $('rAmpl').textContent = hm(fim - s1.a);
+  $('rReservas').textContent = info.reservas || '00h 00m';
+  $('rCarreiras').innerHTML = (info.carreiras || '').split(',').filter(c => c.trim())
+    .map(c => `<span class="chip">${c.trim()}</span>`).join('') || '<span class="chip">—</span>';
+
+  $('avH').value = ''; $('avM').value = '';
+  aplicarGuia();
+  refeicaoAuto();
+
+  const maioriaNoite = noite > minutos/2;
+
+  const hint = $('hintNoite');
+  if (noite > 0){
+    hint.hidden = false;
+    hint.textContent = (maioriaNoite && $('rubricaSelect').value !== 'normal')
+      ? `Serviço maioritariamente noturno (${hm(noite)} entre as 20:00 e as 07:00). Rubrica ajustada — altere se não for o caso.`
+      : `${hm(noite)} caem no período noturno (20:00–07:00).`;
+  } else hint.hidden = true;
+
+  $('result').hidden = false;
+  recalcular();
+  $('result').scrollIntoView({behavior:'smooth', block:'start'});
+}
+function desenharBarra(){
+  if (!atual) return;
+  const bandas = [];
+  for (let d = -1; d <= 1; d++){
+    const ns = Math.max(d*1440 + NOITE_INI, EIXO_INI);
+    const ne = Math.min(d*1440 + 1440 + NOITE_FIM, EIXO_FIM);
+    if (ne > ns) bandas.push(`<div class="band" style="left:${pct(ns)}%;width:${pct(ne)-pct(ns)}%"></div>`);
+  }
+  const seg = (a, b, cls) => {
+    const x = Math.max(pct(a), 0), w = Math.min(pct(b), 100) - x;
+    return `<div class="seg ${cls}" style="left:${x}%;width:${Math.max(w, .8)}%"></div>`;
+  };
+  let html = bandas.join('') + seg(atual.s1.a, atual.s1.b, 'seg-work');
+  if (atual.temP2){
+    html += seg(atual.sp.a, atual.sp.b, 'seg-break')
+          + seg(atual.s2.a, atual.s2.b, 'seg-work');
+  }
+  const av = avulsasMin();
+  if (av > 0) html += seg(atual.fim, atual.fim + av, 'seg-av');
+  $('track').innerHTML = html;
+
+  let t = '';
+  for (let h = 4; h <= 30; h += 4)
+    t += `<span style="left:${pct(h*60)}%">${String(h % 24).padStart(2,'0')}</span>`;
+  $('ticks').innerHTML = t;
+}
+
+/* ============ CÁLCULO ============ */
+function avulsasMin(){
+  const h = parseInt($('avH').value, 10) || 0;
+  const m = parseInt($('avM').value, 10) || 0;
+  return Math.max(0, h*60 + m);
+}
+function blocos(){
+  const b = [[atual.s1.a, atual.s1.b]];
+  if (atual.temP2) b.push([atual.s2.a, atual.s2.b]);
+  const av = avulsasMin();
+  if (av > 0) b.push([atual.fim, atual.fim + av]);
+  return b;
+}
+function reparticao(){
+  const bl = blocos();
+  const total = bl.reduce((s,[a,b]) => s + (b-a), 0);
+  const noiteTotal = bl.reduce((s,[a,b]) => s + minutosNoite(a,b), 0);
+  const av = avulsasMin();
+  const lim = (cfg.limiteDiario || 8) * 60;
+
+  if (!cfg.splitExtra || total <= lim)
+    return {total, noiteTotal, av, base: total, extra: 0, extraNoite: 0, extraNoite1: 0};
+
+  // as horas a mais são as últimas do dia: contam-se do fim para trás
+  let restante = total - lim, iv = [];
+  for (let i = bl.length - 1; i >= 0 && restante > 0; i--){
+    const [a,b] = bl[i], d = Math.min(restante, b - a);
+    iv.push([b - d, b]); restante -= d;
+  }
+  const extraNoite = iv.reduce((s,[a,b]) => s + minutosNoite(a,b), 0);
+  // a 1.ª hora extra é a mais cedo dessas horas
+  let falta = Math.min(60, total - lim), extraNoite1 = 0;
+  iv.slice().sort((x,y) => x[0]-y[0]).forEach(([a,b]) => {
+    if (falta <= 0) return;
+    const d = Math.min(falta, b - a);
+    extraNoite1 += minutosNoite(a, a + d); falta -= d;
+  });
+  return {total, noiteTotal, av, base: lim, extra: total - lim, extraNoite, extraNoite1};
+}
+
+function detalhe(){
+  if (!atual) return null;
+  const rub = $('rubricaSelect').value;
+  const normal = rub === 'normal';
+  const rep = reparticao();
+
+  const r = {minutos: rep.total, noite: rep.noiteTotal, minExtra: rep.extra,
+             noiteExtra: rep.extraNoite, noiteExtra1: rep.extraNoite1, rubrica: rub,
+             opc: {sub: $('ckSub').checked, noite: $('ckNoite').checked, ref: $('ckRefPen').checked}};
+  const linhas = linhasDoRegisto(r, taxasDoMomento());
+  const not = linhas.filter(l => l.k === 'noturno').reduce((s,l) => s + l.v, 0);
+  const notMin = linhas.filter(l => l.k === 'noturno').reduce((s,l) => s + l.min, 0);
+  return {rub, normal, rep, linhas, not, notMin, total: linhas.reduce((s,l) => s + l.v, 0)};
+}
+function recalcular(){
+  const d = detalhe();
+  if (!d) return;
+  const rep = d.rep;
+
+  $('amtNoite').textContent = d.notMin ? `${hm(d.notMin)}, ${eur(d.not)}`
+    : rep.noiteTotal ? 'já pago na taxa de noite' : '—';
+  $('ckNoite').disabled = rep.noiteTotal === 0;
+  $('rValor').textContent = eur(d.total);
+  $('lblTotal').textContent = (d.normal && !rep.extra) ? 'Subsídios do dia' : 'Acréscimo do dia';
+
+  $('avNota').textContent = rep.av
+    ? `Somadas ao fim da chapa: ${fmtHora(atual.s2.b)} → ${fmtHora(atual.s2.b + rep.av)}. Serviço do dia: ${hm(rep.total)}.`
+    : 'Deixe a zero se só fez a chapa.';
+
+  const partes = [];
+  if (d.normal) partes.push(`${hm(rep.base)} incluídos no vencimento base`);
+  agruparLinhas(d.linhas).forEach(l => {
+    if (l.min != null) partes.push(`${ROTULO[l.k]}: ${hm(l.min)} = ${eur(l.v)}`);
+  });
+  $('notaHoras').textContent = partes.join('  ·  ');
+
+  desenharBarra();
+}
+function fmtHora(m){
+  return `${String(Math.floor(m/60) % 24).padStart(2,'0')}:${String(m % 60).padStart(2,'0')}`;
+}
+
+/* ============ REGISTOS ============ */
+function tipoDiaDaData(iso){
+  const d = new Date(iso + 'T12:00:00').getDay();
+  return d === 0 ? 'domingo' : d === 6 ? 'sabado' : 'util';
+}
+/* As taxas usadas num registo ficam gravadas com ele. Assim, mexer nas
+   definições hoje não altera o que já foi registado e conferido. */
+function taxasDoMomento(){
+  return {subsidio:cfg.subsidio, noturno:cfg.noturno, refPen:cfg.refPen,
+          extraD50:cfg.extraD50, extraN50:cfg.extraN50,
+          ...Object.fromEntries(RUBRICAS.map(x => [x.id, cfg[x.id]]))};
+}
+/* Linhas tal como aparecem no recibo: {k, min (ou dias), v} */
+const ROTULO = {
+  extraD50:'Hora extra D 50%', extraN50:'Hora extra N 50%',
+  extraD75:'Hora extra D 75%', extraN75:'Hora extra N 75%',
+  noturno:'Trabalho noturno',
+  descComplD:'Descanso complementar D', descComplN:'Descanso complementar N',
+  descSupD:'Descanso complem. sup. D', descSupN:'Descanso complem. sup. N',
+  feriadoD:'Feriado', feriadoSuplD:'Feriado suplementar D', feriadoSuplN:'Feriado suplementar N',
+  redDescanso:'Red. tempo descanso',
+  subsidio:'Sub. de refeição', refPen:'1.ª ref. penalizada'
+};
+const ORDEM_REC = Object.keys(ROTULO);
+function linhasDoRegisto(r, t){
+  const L = [];
+  const taxa = k => (t && typeof t[k] === 'number') ? t[k] : (cfg[k] || 0);
+  const add = (k, min, tk) => { if (min > 0) L.push({k, min, v: (min / 60) * taxa(tk || k)}); };
+  const ex   = r.minExtra || 0;
+  const exN  = Math.min(r.noiteExtra || 0, ex);
+  const base = Math.max(0, (r.minutos || 0) - ex);
+  const baseN = Math.max(0, Math.min(base, (r.noite || 0) - exN));
+  const baseD = base - baseN;
+  const e1 = Math.min(60, ex), e2 = ex - e1;
+  // registos antigos não guardaram a noite da 1.ª hora: a noite fica no fim das horas extra
+  let e1N = typeof r.noiteExtra1 === 'number' ? Math.min(r.noiteExtra1, e1) : Math.max(0, exN - e2);
+  e1N = Math.min(e1N, exN);
+  const e2N = Math.min(e2, exN - e1N);
+  const fam = familia(r.rubrica);
+  const noite = !r.opc || r.opc.noite;
+
+  if (fam === 'normal' || fam === 'feriado'){
+    if (fam === 'feriado') add('feriadoD', base);
+    add('extraD50', e1 - e1N); add('extraN50', e1N);
+    add('extraD75', e2 - e2N); add('extraN75', e2N);
+    if (noite) add('noturno', baseN);
+  } else if (fam === 'descanso'){
+    add('descComplD', baseD); add('descComplN', baseN);
+    add('descSupD', ex - exN); add('descSupN', exN);
+  } else if (fam === 'fora'){
+    add('extraD75', baseD + ex - exN); add('extraN75', baseN + exN);
+  } else {
+    add('feriadoSuplD', baseD + ex - exN); add('feriadoSuplN', baseN + exN);
+  }
+  if (!r.opc || r.opc.sub) L.push({k:'subsidio', dias:1, v: taxa('subsidio')});
+  if (r.opc && r.opc.ref)  L.push({k:'refPen',   dias:1, v: taxa('refPen')});
+  return L;
+}
+function agruparLinhas(L){
+  const g = {};
+  L.forEach(l => {
+    const x = g[l.k] = g[l.k] || {k:l.k, min: l.min != null ? 0 : null, dias: l.dias != null ? 0 : null, v:0};
+    if (l.min != null) x.min += l.min;
+    if (l.dias != null) x.dias += l.dias;
+    x.v += l.v;
+  });
+  return ORDEM_REC.filter(k => g[k]).map(k => g[k]);
+}
+function contaDoRegisto(r, taxas){
+  return linhasDoRegisto(r, taxas).reduce((s,l) => s + l.v, 0);
+}
+/* início e fim do serviço de um registo (minutos desde a meia-noite do dia) */
+function horarioDoRegisto(r){
+  if (typeof r.ini === 'number' && typeof r.fim === 'number') return {ini:r.ini, fim:r.fim};
+  const c = (dadosChapas[r.dia] || {})[r.chapa];
+  if (!c) return null;
+  const b = blocosDe(c);
+  return {ini: b[0].a, fim: b[b.length-1].b + (r.avulsas || 0)};
+}
+/* Redução do tempo de descanso: entre o fim de um dia e o início do dia
+   seguinte têm de passar pelo menos X horas (11h); o que faltar é pago. */
+function reducaoDescanso(mes){
+  const lim = (cfg.limiteDescanso || 11) * 60;
+  const porDia = {};
+  registos.forEach(r => {
+    const h = horarioDoRegisto(r);
+    if (!h) return;
+    const x = porDia[r.data];
+    porDia[r.data] = x ? {ini: Math.min(x.ini, h.ini), fim: Math.max(x.fim, h.fim)} : h;
+  });
+  let falta = 0;
+  Object.keys(porDia).filter(d => d.startsWith(mes)).forEach(d => {
+    const ant = new Date(d + 'T12:00:00'); ant.setDate(ant.getDate() - 1);
+    const da = `${ant.getFullYear()}-${String(ant.getMonth()+1).padStart(2,'0')}-${String(ant.getDate()).padStart(2,'0')}`;
+    if (!porDia[da]) return;
+    const descanso = 1440 + porDia[d].ini - porDia[da].fim;
+    if (descanso < lim) falta += lim - Math.max(0, descanso);
+  });
+  return {min: falta, v: (falta / 60) * (cfg.redDescanso || 0)};
+}
+/* o valor mostrado é o que ficou gravado no dia em que registou */
+function valorDoRegisto(r){
+  if (typeof r.valor === 'number') return r.valor;
+  if (!r.opc) return 0;
+  return contaDoRegisto(r, taxasDoMomento());
+}
+/* quanto daria esse mesmo dia com as taxas de hoje */
+function valorRecalculado(r){
+  if (!r.opc) return null;
+  return contaDoRegisto(r, taxasDoMomento());
+}
+/* registos cujo valor gravado já não bate com as definições atuais */
+function desatualizados(lista){
+  return lista.filter(r => {
+    const v = valorRecalculado(r);
+    return v !== null && Math.abs(v - valorDoRegisto(r)) >= 0.005;
+  });
+}
+/* ============ AVISO NO CALENDÁRIO ============ */
+/* Gera um evento .ics com alarme. Quem toca é o calendário do telemóvel,
+   por isso funciona com a app fechada e sem rede. */
+const K_AVISO = 'chapas-aviso';
+function isoLocal(d){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function proximaDataDaChapa(dia, inicioMin){
+  const agora = new Date();
+  for (let i = 0; i < 14; i++){
+    const d = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() + i);
+    const iso = isoLocal(d);
+    if (tipoDiaDaData(iso) !== dia) continue;
+    if (i === 0 && new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, inicioMin) <= agora) continue;
+    return iso;
+  }
+  return isoLocal(agora);
+}
+function icsUTC(d){ return d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,''); }
+function icsTxt(t){ return String(t).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n'); }
+function icsDobrar(linha){
+  const out = []; let resto = linha;
+  while (resto.length > 60){
+    let n = 60;
+    while (n > 1 && resto[n-1] === '\\') n--;   // não partir uma sequência \, ou \n
+    out.push(resto.slice(0,n)); resto = ' ' + resto.slice(n);
+  }
+  out.push(resto); return out.join('\r\n');
+}
+function dadosDoAviso(){
+  if (!atual) return null;
+  let data = $('dataTrabalho').value;
+  if (!data){ data = proximaDataDaChapa(atual.dia, atual.s1.a); $('dataTrabalho').value = data; }
+  const [y,m,d] = data.split('-').map(Number);
+  const ini = new Date(y, m-1, d, 0, atual.s1.a);
+  const fim = new Date(y, m-1, d, 0, atual.fim);
+  const antes = Number($('avisoAntes').value) || 30;
+  const carreiras = (atual.info.carreiras || '').split(',').map(c => c.trim()).filter(Boolean).join(', ');
+  const hIni = fmtHora(atual.s1.a);
+  const titulo = `Chapa ${atual.chapa}, começa às ${hIni}` + (carreiras ? ` (${carreiras})` : '');
+  const desc = [
+    `Início: ${hIni}`,
+    `1.º período: ${atual.info.p1}`,
+    atual.temP2 ? `Pausa: ${atual.info.pausa}` : 'Sem pausa',
+    atual.temP2 ? `2.º período: ${atual.info.p2}` : null,
+    `Carreiras: ${carreiras || '—'}`,
+    atual.info.reservas ? `Reservas: ${atual.info.reservas}` : null
+  ].filter(Boolean).join('\n');
+  const alarme = `Chapa ${atual.chapa} começa às ${hIni}` + (carreiras ? `. Carreiras: ${carreiras}` : '');
+  return {data, ini, fim, antes, titulo, desc, alarme};
+}
+function confirmarPassado(a){
+  if (a.ini > new Date()) return true;
+  return confirm(`A chapa ${atual.chapa} em ${a.data.split('-').reverse().join('/')} já começou. Criar o aviso mesmo assim?`);
+}
+function criarAviso(){
+  const a = dadosDoAviso(); if (!a || !confirmarPassado(a)) return;
+  Store.escrever(K_AVISO, String(a.antes));
+  const linhas = [
+    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Chapas//Aviso//PT','CALSCALE:GREGORIAN','METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:chapa-${atual.chapa}-${a.data}-${Date.now()}@chapas`,
+    `DTSTAMP:${icsUTC(new Date())}`,
+    `DTSTART:${icsUTC(a.ini)}`,
+    `DTEND:${icsUTC(a.fim)}`,
+    `SUMMARY:${icsTxt(a.titulo)}`,
+    `DESCRIPTION:${icsTxt(a.desc)}`,
+    'BEGIN:VALARM','ACTION:DISPLAY',
+    `DESCRIPTION:${icsTxt(a.alarme)}`,
+    `TRIGGER:-PT${a.antes}M`,
+    'END:VALARM',
+    'END:VEVENT','END:VCALENDAR'
+  ];
+  const ics = linhas.map(icsDobrar).join('\r\n') + '\r\n';
+  const nome = `chapa-${atual.chapa}-${a.data}.ics`;
+  const ios = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (window.claude){
+    guardarFicheiro(nome, ics, 'text/calendar').then(ok => {
+      if (ok) toast(`Aviso ${a.antes} min antes. Abra o ficheiro para o pôr no calendário`);
+    });
+    return;
+  }
+  if (ios){
+    // No iPhone o Safari abre logo o ecrã "Adicionar ao calendário".
+    window.location.href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
+  } else {
+    guardarFicheiro(nome, ics, 'text/calendar');
+  }
+  toast(`Aviso ${a.antes} min antes das ${fmtHora(atual.s1.a)}. Abra o ficheiro para guardar`);
+}
+function avisoGoogle(){
+  const a = dadosDoAviso(); if (!a || !confirmarPassado(a)) return;
+  const q = new URLSearchParams({
+    action:'TEMPLATE', text:a.titulo,
+    dates:`${icsUTC(a.ini)}/${icsUTC(a.fim)}`,
+    details:a.desc, ctz:'Europe/Lisbon'
+  });
+  window.open('https://calendar.google.com/calendar/render?' + q.toString(), '_blank');
+}
+/* ============ A MINHA ESCALA ============ */
+const K_ESCALA = 'chapas-escala';
+let escala = [];   // [{data:'2026-10-06', chapa:'7201'}]
+async function carregarEscala(){
+  const v = await Store.ler(K_ESCALA);
+  try { escala = v ? JSON.parse(v) || [] : []; } catch(e){ escala = []; }
+}
+async function gravarEscala(){
+  const ok = await Store.escrever(K_ESCALA, JSON.stringify(escala));
+  if (!ok) toast('Não foi possível guardar a escala');
+}
+function infoEscala(e){
+  const tipo = tipoDiaDaData(e.data);
+  const info = dadosChapas[tipo][e.chapa];
+  if (!info) return {tipo, erro:true};
+  const s1 = span(info.p1), temP2 = !!info.p2, s2 = temP2 ? span(info.p2) : null;
+  const carreiras = (info.carreiras || '').split(',').map(c => c.trim()).filter(Boolean).join(', ');
+  return {tipo, info, ini: s1.a, fim: temP2 ? s2.b : s1.b, temP2, carreiras};
+}
+function nomeData(iso){
+  const d = new Date(iso + 'T12:00:00');
+  const dia = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][d.getDay()];
+  return `${dia} ${d.getDate()}/${d.getMonth()+1}`;
+}
+function pintarEscala(){
+  const hoje = isoLocal(new Date());
+  escala.sort((a,b) => a.data.localeCompare(b.data) || a.chapa.localeCompare(b.chapa));
+  const futuros = escala.filter(e => e.data >= hoje).length;
+  $('escConta').textContent = escala.length ? `${futuros} por fazer` : '';
+  $('escLista').innerHTML = escala.length ? escala.map((e, i) => {
+    const x = infoEscala(e);
+    const det = x.erro
+      ? `Não existe em ${NOME_DIA[x.tipo].toLowerCase()} na escala carregada`
+      : `${fmtHora(x.ini)}–${fmtHora(x.fim)}${x.carreiras ? ', ' + x.carreiras : ''}`;
+    return `<div class="lrow${e.data < hoje ? ' passado' : ''}${x.erro ? ' erro' : ''}">
+      <div><b>${nomeData(e.data)}</b> · Chapa ${e.chapa}<small class="lrow-det">${det}</small></div>
+      <button class="x" type="button" data-i="${i}" aria-label="Tirar ${nomeData(e.data)}">×</button></div>`;
+  }).join('') : '<p class="empty" style="margin:0">Ainda não tem dias na escala.</p>';
+}
+function diaSeguinte(iso){
+  const [y,m,d] = iso.split('-').map(Number);
+  return isoLocal(new Date(y, m-1, d+1));
+}
+async function adicionarEscala(){
+  const data = $('escData').value, chapa = $('escChapa').value.trim();
+  if (!data){ toast('Escolha o dia'); return; }
+  if (!chapa){ toast('Escreva o número da chapa'); $('escChapa').focus(); return; }
+  const tipo = tipoDiaDaData(data);
+  if (!dadosChapas[tipo][chapa]){
+    toast(`A chapa ${chapa} não existe em ${NOME_DIA[tipo].toLowerCase()}`); return;
+  }
+  escala = escala.filter(e => e.data !== data);
+  escala.push({data, chapa});
+  await gravarEscala();
+  pintarEscala();
+  $('escData').value = diaSeguinte(data);
+  $('escChapa').value = ''; $('escChapa').focus();
+}
+async function criarAvisosEscala(){
+  const agora = new Date();
+  const antes = Number($('escAntes').value) || 30;
+  Store.escrever(K_AVISO, String(antes));
+  const eventos = [];
+  escala.forEach(e => {
+    const x = infoEscala(e); if (x.erro) return;
+    const [y,m,d] = e.data.split('-').map(Number);
+    const ini = new Date(y, m-1, d, 0, x.ini), fim = new Date(y, m-1, d, 0, x.fim);
+    if (ini <= agora) return;
+    const h = fmtHora(x.ini);
+    const desc = [`Início: ${h}`, `1.º período: ${x.info.p1}`,
+      x.temP2 ? `Pausa: ${x.info.pausa}` : 'Sem pausa', x.temP2 ? `2.º período: ${x.info.p2}` : null,
+      `Carreiras: ${x.carreiras || '—'}`].filter(Boolean).join('\n');
+    eventos.push([
+      'BEGIN:VEVENT',
+      `UID:chapa-${e.chapa}-${e.data}@chapas`,
+      `DTSTAMP:${icsUTC(agora)}`,
+      `DTSTART:${icsUTC(ini)}`, `DTEND:${icsUTC(fim)}`,
+      `SUMMARY:${icsTxt(`Chapa ${e.chapa}, começa às ${h}` + (x.carreiras ? ` (${x.carreiras})` : ''))}`,
+      `DESCRIPTION:${icsTxt(desc)}`,
+      'BEGIN:VALARM','ACTION:DISPLAY',
+      `DESCRIPTION:${icsTxt(`Chapa ${e.chapa} começa às ${h}` + (x.carreiras ? `. Carreiras: ${x.carreiras}` : ''))}`,
+      `TRIGGER:-PT${antes}M`,
+      'END:VALARM','END:VEVENT'
+    ]);
+  });
+  if (!eventos.length){ toast('Não há dias por fazer na escala'); return; }
+  const linhas = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Chapas//Escala//PT','CALSCALE:GREGORIAN','METHOD:PUBLISH',
+    ...eventos.flat(), 'END:VCALENDAR'];
+  const ics = linhas.map(icsDobrar).join('\r\n') + '\r\n';
+  const ok = await guardarFicheiro(`escala-${isoLocal(agora)}.ics`, ics, 'text/calendar');
+  if (ok) toast(`${eventos.length} avisos prontos. Abra o ficheiro para os pôr no calendário`);
+}
+/* ============ CONTA (Supabase) ============ */
+function pintarConta(){
+  const box = $('nuvemBox'); if (!box) return;
+  box.hidden = Store.temNuvem();          // dentro do Claude não é preciso
+  if (box.hidden) return;
+  const cfg = Store.supaCfg() || {};
+  $('supaUrl').value = cfg.url || ''; $('supaKey').value = cfg.key || '';
+  $('nuvemCfgBox').open = !(cfg.url && cfg.key);
+  $('nuvemFora').hidden = Store.temSupa();
+  $('nuvemDentro').hidden = !Store.temSupa();
+  if (Store.temSupa()) $('nuvemQuem').textContent = `Ligado como ${Store.supaUser.email}. Tudo o que registar fica guardado online.`;
+}
+function guardarCfgSupa(){
+  const url = $('supaUrl').value.trim().replace(/\/+$/, ''), key = $('supaKey').value.trim();
+  if (!/^https:\/\/.+\.supabase\.co$/.test(url) || key.length < 20){
+    toast('Confirme o Project URL e a chave anon'); $('nuvemCfgBox').open = true; return null;
+  }
+  localStorage.setItem('chapas-supa', JSON.stringify({url, key}));
+  return {url, key};
+}
+async function entrarConta(criar){
+  const cfg = guardarCfgSupa(); if (!cfg) return;
+  if (!window.supabase){ toast('Sem internet para ligar à conta'); return; }
+  const email = $('supaEmail').value.trim(), password = $('supaPass').value;
+  if (!email || password.length < 6){ toast('Email e palavra-passe com 6 ou mais caracteres'); return; }
+  const cli = window.supabase.createClient(cfg.url, cfg.key, {auth:{persistSession:true, autoRefreshToken:true}});
+  const r = criar ? await cli.auth.signUp({email, password}) : await cli.auth.signInWithPassword({email, password});
+  if (r.error){
+    const m = r.error.message || '';
+    toast(/Invalid login/i.test(m) ? 'Email ou palavra-passe errados'
+        : /confirm/i.test(m) ? 'Confirme primeiro o email que recebeu'
+        : /registered/i.test(m) ? 'Essa conta já existe. Toque em Entrar'
+        : 'Não foi possível entrar: ' + m);
+    return;
+  }
+  if (criar && !r.data.session){ toast('Conta criada. Abra o email de confirmação e depois toque em Entrar'); return; }
+  toast('A ligar à conta…');
+  setTimeout(() => location.reload(), 600);   // recarrega já a ler da nuvem (e sobe o que estava no telemóvel)
+}
+async function sairConta(){
+  if (!confirm('Sair da conta? Os dados continuam guardados online.')) return;
+  try { await Store.supa.auth.signOut(); } catch(e){}
+  location.reload();
+}
+function registar(){
+  if (!atual) return;
+  const data = $('dataTrabalho').value;
+  if (!data){ toast('Escolha a data em que trabalhou'); return; }
+
+  const esperado = tipoDiaDaData(data);
+  if (esperado !== atual.dia){
+    if (!confirm(`Atenção: ${data.split('-').reverse().join('/')} é ${NOME_DIA[esperado].toLowerCase()}, mas a chapa ${atual.chapa} é de ${NOME_DIA[atual.dia].toLowerCase()}.\n\nGuardar mesmo assim?`)) return;
+  }
+  if (registos.some(r => r.data === data && r.chapa === atual.chapa)){
+    if (!confirm(`Já tem a chapa ${atual.chapa} registada nesse dia. Guardar outra vez?`)) return;
+  }
+
+  const d = detalhe();
+  registos.push({
+    id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
+    data, chapa: atual.chapa, dia: atual.dia,
+    minutos: d.rep.total, noite: d.rep.noiteTotal, avulsas: d.rep.av,
+    minExtra: d.rep.extra, noiteExtra: d.rep.extraNoite, noiteExtra1: d.rep.extraNoite1,
+    ini: atual.s1.a, fim: (atual.temP2 ? atual.s2.b : atual.s1.b) + d.rep.av,
+    rubrica: d.rub, valor: d.total, taxas: taxasDoMomento(), gravadoEm: new Date().toISOString(),
+    opc: {sub: $('ckSub').checked, noite: $('ckNoite').checked && atual.noite > 0, ref: $('ckRefPen').checked}
+  });
+  gravarReg();
+  mesSel = data.slice(0,7);
+  pintarMes();
+  const tabMes = document.querySelector('.tabbar button[data-pane="mes"]');
+  if (tabMes) tabMes.click();
+  toast(`Chapa ${atual.chapa} registada, ${eur(d.total)}`);
+}
+function remover(id){
+  registos = registos.filter(r => r.id !== id);
+  gravarReg(); pintarMes();
+}
+function mudarMes(passo){
+  const [a,m] = mesSel.split('-').map(Number);
+  const d = new Date(a, m - 1 + passo, 1);
+  mesSel = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  pintarMes();
+}
+function pintarDesatualizados(doMes){
+  const fora = desatualizados(doMes);
+  const cx = $('desatual');
+  if (!fora.length){ cx.hidden = true; return; }
+  const dif = fora.reduce((s,r) => s + (valorRecalculado(r) - valorDoRegisto(r)), 0);
+  const quantos = fora.length === 1 ? '1 dia deste mês foi registado' : `${fora.length} dias deste mês foram registados`;
+  $('desatualTxt').innerHTML =
+    `${quantos} com valores diferentes dos que tem agora em "Valores do recibo". ` +
+    `Os valores gravados ficaram como estavam, de propósito. ` +
+    `Recalcular mudaria o total do mês em <b>${dif >= 0 ? '+' : '−'} ${eur(Math.abs(dif))}</b>.`;
+  cx.hidden = false;
+  cx.dataset.ids = fora.map(r => r.id).join(',');
+}
+
+function pintarLiquido(doMes, val){
+  const subs  = doMes.reduce((s,r) => s + ((!r.opc || r.opc.sub)
+    ? ((r.taxas && r.taxas.subsidio) || cfg.subsidio) : 0)
+    + ((r.opc && r.opc.ref) ? ((r.taxas && r.taxas.refPen) || cfg.refPen) : 0), 0);
+  const bruto = cfg.vencBase + val;
+  const trib  = cfg.subIsento ? bruto - subs : bruto;
+  const ss    = trib * ((cfg.ss  || 0) / 100);
+  const variaveis = Math.max(0, trib - cfg.vencBase);
+  const irs   = cfg.irsAuto
+    ? retencaoIRS(Math.min(trib, cfg.vencBase), cfg.dependentes) + retencaoIRS(variaveis, 0)
+    : trib * ((cfg.irs || 0) / 100);
+  const irsPct = trib > 0 ? irs / trib * 100 : 0;
+  const out   = cfg.outros || 0;
+  const liq   = bruto - ss - irs - out;
+
+  const linha = (rot, v, cls, sub) =>
+    `<div class="lr ${cls||''}"><span>${rot}${sub ? `<small>${sub}</small>` : ''}</span><span>${v}</span></div>`;
+
+  let h = linha('Bruto do mês', eur(bruto), '', `vencimento base + ${eur(val)} de acréscimos`);
+  if (cfg.subIsento && subs > 0)
+    h += linha('Base de incidência', eur(trib), '', `sem os ${eur(subs)} de subsídio de refeição`);
+  h += linha(`Segurança Social ${cfg.ss || 0}%`, '− ' + eur(ss), 'neg');
+  h += linha(cfg.irsAuto ? `Retenção de IRS ≈ ${irsPct.toFixed(1).replace('.', ',')}%` : `Retenção de IRS ${cfg.irs || 0}%`, '− ' + eur(irs), 'neg',
+    cfg.irsAuto ? 'tabela de retenção 2026, calculada sozinha' : '');
+  if (out > 0) h += linha('Outros descontos', '− ' + eur(out), 'neg');
+  h += linha('Líquido estimado', eur(liq), 'fim');
+  if (subs > 0){
+    h += linha('Na conta (aprox.)', eur(liq - subs), '', 'sem a refeição');
+    h += linha('No cartão refeição', eur(subs));
+  }
+  if (!cfg.vencBase)
+    h += `<div class="lr aviso">Ponha o seu vencimento base em Ajustes → Valores do recibo. A app calcula a partir dele todos os valores por hora.</div>`;
+  if (!cfg.irsAuto && !cfg.irs)
+    h += `<div class="lr aviso">A taxa de IRS está a zero, por isso este líquido está acima do real. Ponha a percentagem do seu recibo em "Valores do recibo".</div>`;
+
+  $('liquido').innerHTML = h;
+  return {liq, bruto, subs};
+}
+function pintarMes(){
+  const [a,m] = mesSel.split('-').map(Number);
+  const nomeMes = new Date(a, m-1, 1).toLocaleDateString('pt-PT', {month:'long', year:'numeric'});
+  $('mesNome').textContent = nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1);
+
+  const doMes = registos.filter(r => r.data.startsWith(mesSel)).sort((x,y) => x.data.localeCompare(y.data));
+  const dias = new Set(doMes.map(r => r.data)).size;
+  const min  = doMes.reduce((s,r) => s + r.minutos, 0);
+  const noi  = doMes.reduce((s,r) => s + (r.noite||0), 0);
+  const ext  = doMes.reduce((s,r) => s + (r.minExtra||0), 0);
+  const red  = reducaoDescanso(mesSel);
+  const val  = doMes.reduce((s,r) => s + valorDoRegisto(r), 0) + red.v;
+
+  $('mDias').textContent = dias;
+  $('mHoras').textContent = hm(min);
+  $('mNoite').textContent = hm(noi);
+  $('mExtra').textContent = hm(ext);
+  const L = pintarLiquido(doMes, val);
+  $('mValor').textContent = '≈ ' + eur(L.liq);
+  $('mComBase').textContent = `Bruto ${eur(L.bruto)} · acréscimos e subsídios ${eur(val)}`;
+  pintarDesatualizados(doMes);
+  pintarRecibo(doMes, red);
+
+  const semana = ['dom','seg','ter','qua','qui','sex','sáb'];
+  $('entries').innerHTML = doMes.map(r => {
+    const dia = semana[new Date(r.data + 'T12:00:00').getDay()];
+    const det = (r.minExtra
+                  ? `${hm(r.minutos - r.minExtra)} mais ${hm(r.minExtra)} extra`
+                  : hm(r.minutos))
+              + (r.avulsas ? `, com ${hm(r.avulsas)} avulsas` : '');
+    return `
+    <div class="entry">
+      <span class="d">${r.data.slice(8,10)}<small>${dia}</small></span>
+      <span class="m"><b>Chapa ${r.chapa}</b><small>${nomeRubrica(r.rubrica)}, ${det}</small></span>
+      <span class="v">${eur(valorDoRegisto(r))}</span>
+      <button class="x" type="button" data-del="${r.id}" aria-label="Remover registo de ${r.data}">×</button>
+    </div>`;
+  }).join('');
+  $('mEmpty').hidden = doMes.length > 0;
+}
+/* Quadro do mês com as mesmas linhas do recibo, para conferir */
+function pintarRecibo(doMes, red){
+  const el = $('recibo');
+  if (!doMes.length){ el.innerHTML = ''; return; }
+  const L = [];
+  doMes.forEach(r => linhasDoRegisto(r, taxasDoMomento()).forEach(l => L.push(l)));
+  if (red.min > 0) L.push({k:'redDescanso', min: red.min, v: red.v});
+  const g = agruparLinhas(L);
+  const tot = g.reduce((s,l) => s + l.v, 0);
+  const qt = l => l.min != null ? (l.min / 60).toFixed(2).replace('.', ',') + ' h' : `${l.dias} ${l.dias === 1 ? 'dia' : 'dias'}`;
+  el.innerHTML = `<b class="rec-tit">Como no recibo</b>` +
+    g.map(l => `<div class="lr"><span>${ROTULO[l.k]}<small>${qt(l)}</small></span><span>${eur(l.v)}</span></div>`).join('') +
+    `<div class="lr fim"><span>Total</span><span>${eur(tot)}</span></div>` +
+    `<p class="note">Quantidades em horas decimais, como no recibo. Calculado com os valores de hoje em "Valores do recibo".</p>`;
+}
+function copiarResumo(){
+  const doMes = registos.filter(r => r.data.startsWith(mesSel)).sort((x,y)=>x.data.localeCompare(y.data));
+  if (!doMes.length){ toast('Não há nada para copiar'); return; }
+  const linhas = ['Data;Chapa;Servico;Acima 8h;Noturnas;Rubrica;Valor'];
+  doMes.forEach(r => linhas.push([r.data, r.chapa, hm(r.minutos), hm(r.minExtra||0), hm(r.noite||0),
+    nomeRubrica(r.rubrica), valorDoRegisto(r).toFixed(2).replace('.',',')].join(';')));
+  const red = reducaoDescanso(mesSel);
+  if (red.min > 0) linhas.push(['','','','','','Red. tempo descanso ' + hm(red.min), red.v.toFixed(2).replace('.',',')].join(';'));
+  linhas.push(['TOTAL','','','','','',
+    (doMes.reduce((s,r)=>s+valorDoRegisto(r),0) + red.v).toFixed(2).replace('.',',')].join(';'));
+  const txt = linhas.join('\n');
+  navigator.clipboard?.writeText(txt).then(()=>toast('Resumo copiado'), ()=>fallbackCopiar(txt)) || fallbackCopiar(txt);
+}
+function fallbackCopiar(txt){
+  const ta = document.createElement('textarea');
+  ta.value = txt; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); toast('Resumo copiado'); } catch(e){ toast('Copie manualmente do ecrã'); }
+  ta.remove();
+}
+
+
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  if (!/claude|claudeusercontent/.test(location.hostname))
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+
+/* ============ ARRANQUE ============ */
+(async function init(){
+  await carregar();
+  await carregarMinhas();
+  montarDefinicoes();
+  montarSelect();
+  pintarMontantes();
+  pintarDados();
+  pintarMinhas();
+
+  const cab = document.querySelector('header');
+  const marcarRolagem = () => cab.classList.toggle('rolado', window.scrollY > 4);
+  window.addEventListener('scroll', marcarRolagem, {passive:true});
+  marcarRolagem();
+
+  /* separadores */
+  const PANES = ['chapa','mes','ajustes'];
+  function mostrar(nome, focar){
+    document.querySelectorAll('.tabbar button').forEach(b =>
+      b.setAttribute('aria-selected', b.dataset.pane === nome));
+    PANES.forEach(p => $('pane-'+p).hidden = (p !== nome));
+    if (focar !== false) window.scrollTo({top:0, behavior:'instant'});
+  }
+  document.querySelectorAll('.tabbar button').forEach(b =>
+    b.addEventListener('click', () => mostrar(b.dataset.pane)));
+
+  $('btnAtualizar').addEventListener('click', async () => {
+    const ids = ($('desatual').dataset.ids || '').split(',').filter(Boolean);
+    if (!ids.length) return;
+    if (!confirm(`Recalcular ${ids.length} ${ids.length === 1 ? 'registo' : 'registos'} com os valores que tem agora?\n\nOs valores originais perdem-se.`)) return;
+    registos.forEach(r => {
+      if (!ids.includes(r.id)) return;
+      const v = valorRecalculado(r);
+      if (v === null) return;
+      r.valor = v;
+      r.taxas = taxasDoMomento();
+    });
+    await gravarReg();
+    pintarMes();
+    toast('Registos recalculados');
+  });
+
+  const dz = $('drop'), fc = $('fileChapas');
+  dz.addEventListener('click', () => fc.click());
+  fc.addEventListener('change', e => { receberFicheiros(e.target.files); e.target.value = ''; });
+  ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => {
+    e.preventDefault(); dz.classList.add('sobre');
+  }));
+  ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => {
+    e.preventDefault(); dz.classList.remove('sobre');
+  }));
+  dz.addEventListener('drop', e => receberFicheiros(e.dataTransfer.files));
+  $('btnApagarCarregadas').addEventListener('click', apagarCarregadas);
+
+  $('btnExportar').addEventListener('click', exportar);
+  $('btnImportar').addEventListener('click', () => $('fileImport').click());
+  $('fileImport').addEventListener('change', e => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => importar(fr.result);
+    fr.onerror = () => toast('Não foi possível ler o ficheiro');
+    fr.readAsText(f);
+    e.target.value = '';
+  });
+  $('btnApagarTudo').addEventListener('click', async () => {
+    if (!confirm('Apagar todos os registos e voltar aos valores de origem? Isto não se desfaz.')) return;
+    registos = [];
+    cfg = {...CFG_DEFAULT};
+    await Store.apagar(K_REG); await Store.apagar(K_CFG); await Store.apagar(K_TS);
+    recarregarCampos(); montarSelect(); pintarMontantes(); pintarMes(); pintarDados();
+    toast('Tudo apagado');
+  });
+
+  const hoje = new Date();
+  const isoHoje = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`;
+  $('dataTrabalho').value = isoHoje;
+  mesSel = isoHoje.slice(0,7);
+  pintarMes();
+
+  function marcarDia(v){
+    diaSel = v;
+    document.querySelectorAll('.days button').forEach(x => x.setAttribute('aria-pressed', x.dataset.dia === v));
+    montarDatalist();
+    montarLista();
+  }
+  marcarDia(tipoDiaDaData(isoHoje));
+
+  $('listaChapas').addEventListener('click', e => {
+    const b = e.target.closest('[data-chapa]');
+    if (!b) return;
+    $('chapaInput').value = b.dataset.chapa;
+    consultar();
+  });
+
+  $('dataTrabalho').addEventListener('change', () => {
+    const v = $('dataTrabalho').value;
+    if (!v) return;
+    const t = tipoDiaDaData(v);
+    if (t !== diaSel && !atual) marcarDia(t);
+    if (atual && t !== atual.dia)
+      toast(`Atenção: essa data é ${NOME_DIA[t].toLowerCase()}`);
+  });
+
+  document.querySelectorAll('.days button').forEach(b => b.addEventListener('click', () => {
+    marcarDia(b.dataset.dia);
+    $('result').hidden = true; $('msg').hidden = true; atual = null;
+    $('chapaInput').focus();
+  }));
+
+  $('gEscala').addEventListener('click', e => {
+    const b = e.target.closest('button[data-v]'); if (!b) return;
+    escalaDia = b.dataset.v;
+    $('gEscala').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    if (escalaDia.startsWith('folga')) naEscala = false;
+    aplicarGuia();
+  });
+  $('gAtrib').addEventListener('click', e => {
+    const b = e.target.closest('button[data-v]'); if (!b || b.disabled) return;
+    naEscala = b.dataset.v === 'sim';
+    $('gAtrib').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    aplicarGuia();
+  });
+
+  $('btnVer').addEventListener('click', consultar);
+  $('chapaInput').addEventListener('keydown', e => { if (e.key === 'Enter') consultar(); });
+  $('rubricaSelect').addEventListener('change', () => {
+    rubricaManual = true;
+    $('guiaNota').textContent = 'Rubrica escolhida por si, à margem das respostas acima.';
+    recalcular();
+  });
+  ['ckSub','ckNoite','ckRefPen'].forEach(id => $(id).addEventListener('change', recalcular));
+  ['avH','avM'].forEach(id => {
+    const el = $(id);
+    ['input','change'].forEach(ev => el.addEventListener(ev, () => {
+      let v = parseInt(el.value, 10);
+      if (id === 'avM' && v >= 60){ el.value = 59; }
+      if (v < 0) el.value = 0;
+      recalcular();
+    }));
+  });
+  $('avLimpar').addEventListener('click', () => {
+    $('avH').value = ''; $('avM').value = ''; recalcular();
+  });
+
+  $('btnRegistar').addEventListener('click', registar);
+  $('btnAviso').addEventListener('click', criarAviso);
+  pintarConta();
+  $('supaEntrar').addEventListener('click', () => entrarConta(false));
+  $('supaCriar').addEventListener('click', () => entrarConta(true));
+  $('supaSair').addEventListener('click', sairConta);
+  await carregarEscala();
+  $('escData').value = isoLocal(new Date());
+  pintarEscala();
+  $('escAdd').addEventListener('click', adicionarEscala);
+  $('escChapa').addEventListener('keydown', e => { if (e.key === 'Enter') adicionarEscala(); });
+  $('escAvisos').addEventListener('click', criarAvisosEscala);
+  $('escLista').addEventListener('click', async e => {
+    const b = e.target.closest('.x'); if (!b) return;
+    escala.splice(Number(b.dataset.i), 1); await gravarEscala(); pintarEscala();
+  });
+  Store.ler(K_AVISO).then(v => { if (v && $('escAntes').querySelector(`option[value="${v}"]`)) $('escAntes').value = v; });
+  $('btnAvisoGoogle').addEventListener('click', avisoGoogle);
+  Store.ler(K_AVISO).then(v => { if (v && $('avisoAntes').querySelector(`option[value="${v}"]`)) $('avisoAntes').value = v; });
+  $('mesPrev').addEventListener('click', () => mudarMes(-1));
+  $('mesNext').addEventListener('click', () => mudarMes(1));
+  $('btnCopiar').addEventListener('click', copiarResumo);
+  $('btnLimpar').addEventListener('click', () => {
+    const n = registos.filter(r => r.data.startsWith(mesSel)).length;
+    if (!n){ toast('Este mês está vazio'); return; }
+    if (confirm(`Apagar os ${n} registo(s) de ${$('mesNome').textContent}?`)){
+      registos = registos.filter(r => !r.data.startsWith(mesSel));
+      gravarReg(); pintarMes(); toast('Mês limpo');
+    }
+  });
+  $('entries').addEventListener('click', e => {
+    const b = e.target.closest('[data-del]');
+    if (b) remover(b.dataset.del);
+  });
+})();
+</script>
+</body>
+</html>
