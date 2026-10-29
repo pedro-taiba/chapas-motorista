@@ -291,7 +291,17 @@ label.fld{display:block;font-size:.78rem;color:var(--muted);margin-bottom:5px}
 .lr.fim{margin-top:4px;padding-top:12px;border-top:1px solid var(--rule-strong)}
 .lr.fim>span:first-child{color:var(--ink);font-weight:600}
 .lr.fim>span:last-child{font-size:1.35rem;font-weight:600;letter-spacing:-.02em;color:var(--credit)}
-.rec-tit{display:block;font-size:.85rem;font-weight:600;margin-bottom:4px}
+.rec-tit{display:block;font-size:.85rem;font-weight:600;margin-bottom:10px}
+.res-grupos{display:flex;flex-direction:column;gap:14px;margin-bottom:6px}
+.rg-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.rg-nome{font-size:.9rem;font-weight:500}
+.rg-v{font-weight:600;white-space:nowrap}
+.rg-barra{height:6px;border-radius:3px;background:var(--panel-sunk);margin:6px 0 5px;overflow:hidden}
+.rg-barra i{display:block;height:100%;border-radius:3px;background:var(--credit)}
+.rg-sub{font-size:.75rem;color:var(--muted)}
+.rec-det{margin-top:12px;border-top:1px solid var(--rule-soft);padding-top:10px}
+.rec-det summary{cursor:pointer;font-size:.82rem;color:var(--credit);font-weight:500;padding:6px 0}
+.rec-det[open] summary{margin-bottom:6px}
 .recibo .lr.fim>span:last-child{font-size:1.1rem}
 .lr.aviso{display:block;color:var(--night-ink);background:var(--night);border:0;
           border-radius:var(--r);padding:9px 11px;margin-top:10px;font-size:.77rem}
@@ -2254,10 +2264,36 @@ function pintarRecibo(doMes, red){
   const g = agruparLinhas(L);
   const tot = g.reduce((s,l) => s + l.v, 0);
   const qt = l => l.min != null ? (l.min / 60).toFixed(2).replace('.', ',') + ' h' : `${l.dias} ${l.dias === 1 ? 'dia' : 'dias'}`;
-  el.innerHTML = `<b class="rec-tit">Como no recibo</b>` +
+  // resumo simples por grupos; o detalhe linha a linha fica escondido
+  const GRUPOS = [
+    {nome:'Horas extra',            dica:'acima das 8h nos dias normais', ks:['extraD50','extraN50','extraD75','extraN75']},
+    {nome:'Folgas trabalhadas',     dica:'folgas vendidas e descanso complementar', ks:['descComplD','descComplN','descSupD','descSupN']},
+    {nome:'Feriados',               dica:'', ks:['feriadoD','feriadoSuplD','feriadoSuplN']},
+    {nome:'Noite',                  dica:'suplemento das horas noturnas', ks:['noturno']},
+    {nome:'Descanso curto',         dica:'menos de 11h entre dois dias', ks:['redDescanso']},
+    {nome:'Refeição',               dica:'cartão refeição', ks:['subsidio','refPen']}
+  ];
+  const porK = Object.fromEntries(g.map(l => [l.k, l]));
+  const blocos = GRUPOS.map(G => {
+    const ls = G.ks.map(k => porK[k]).filter(Boolean);
+    if (!ls.length) return null;
+    const v = ls.reduce((a,l) => a + l.v, 0);
+    const min = ls.reduce((a,l) => a + (l.min || 0), 0);
+    const dias = ls.reduce((a,l) => a + (l.dias || 0), 0);
+    return {...G, v, qtd: dias ? `${dias} ${dias === 1 ? 'dia' : 'dias'}` : hm(min)};
+  }).filter(Boolean);
+  const max = Math.max(...blocos.map(b => b.v), 1);
+  el.innerHTML = `<b class="rec-tit">Para onde vai o dinheiro extra</b>` +
+    `<div class="res-grupos">` + blocos.map(b => `
+      <div class="rg">
+        <div class="rg-top"><span class="rg-nome">${b.nome}</span><span class="rg-v">${eur(b.v)}</span></div>
+        <div class="rg-barra"><i style="width:${Math.max(3, b.v / max * 100).toFixed(1)}%"></i></div>
+        <div class="rg-sub">${b.qtd}${b.dica ? ' · ' + b.dica : ''}</div>
+      </div>`).join('') + `</div>` +
+    `<div class="lr fim"><span>Total extra do mês</span><span>${eur(tot)}</span></div>` +
+    `<details class="rec-det"><summary>Conferir com o recibo, linha a linha</summary>` +
     g.map(l => `<div class="lr"><span>${ROTULO[l.k]}<small>${qt(l)}</small></span><span>${eur(l.v)}</span></div>`).join('') +
-    `<div class="lr fim"><span>Total</span><span>${eur(tot)}</span></div>` +
-    `<p class="note">Quantidades em horas decimais, como no recibo. Calculado com os valores de hoje em "Valores do recibo".</p>`;
+    `<p class="note">Quantidades em horas decimais, como aparecem no recibo.</p></details>`;
 }
 function copiarResumo(){
   const doMes = registos.filter(r => r.data.startsWith(mesSel)).sort((x,y)=>x.data.localeCompare(y.data));
