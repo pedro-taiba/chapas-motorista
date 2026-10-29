@@ -1,5 +1,5 @@
 /* Guarda a app no telemóvel para abrir sem rede. */
-const CACHE = 'chapas-colegas-v2';
+const CACHE = 'chapas-colegas-v3';
 const FICHEIROS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {

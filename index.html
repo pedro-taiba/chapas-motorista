@@ -602,7 +602,7 @@ footer{text-align:center;font-size:.72rem;color:var(--muted);padding:10px 10px 0
     </div>
     <p class="dados-ts" id="dadosTs"></p>
     <p class="dados-aviso" id="dadosAviso" hidden>Este navegador não deixa guardar nada, por isso tudo se perde ao fechar. Guarde uma cópia antes de sair.</p>
-    <p class="note" id="dadosNota">Os registos ficam no telemóvel, não numa nuvem. Se mudar de telemóvel ou limpar o navegador, precisa da cópia.</p>
+    <p class="note" id="dadosNota">Os seus dados ficam guardados só neste telemóvel. Faça "Guardar cópia" de vez em quando: se mudar de telemóvel ou limpar o navegador, é com ela que recupera tudo.</p>
     <div class="nuvem" id="nuvemBox" hidden>
       <div id="nuvemFora">
         <p class="note" style="margin-top:0">Entre na sua conta para guardar tudo online. Assim nada se perde ao limpar o navegador ou trocar de telemóvel.</p>
@@ -2047,8 +2047,9 @@ async function criarAvisosEscala(){
 /* ============ CONTA (Supabase) ============ */
 function pintarConta(){
   const box = $('nuvemBox'); if (!box) return;
-  box.hidden = Store.temNuvem();          // dentro do Claude não é preciso
-  if (box.hidden) return;
+  // versão dos colegas: sem contas nem nuvem própria; os dados ficam no telemóvel
+  box.hidden = true;
+  return;
   const cfg = Store.supaCfg() || {};
   $('supaUrl').value = cfg.url || ''; $('supaKey').value = cfg.key || '';
   $('nuvemCfgBox').open = !(cfg.url && cfg.key);
