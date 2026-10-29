@@ -1,6 +1,6 @@
 /* Guarda a app no telemóvel para abrir sem rede. */
-const CACHE = 'chapas-colegas-v3';
-const FICHEIROS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
+const CACHE = 'chapas-colegas-v4';
+const FICHEIROS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FICHEIROS)).then(() => self.skipWaiting()));

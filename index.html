@@ -74,6 +74,32 @@ header.rolado::after{opacity:1}
 h1{font-size:1.15rem;font-weight:600;letter-spacing:-.015em;line-height:1.2}
 header .sub{font-size:.8rem;color:var(--muted);padding-bottom:2px}
 
+
+/* ---------- boas-vindas e instalar ---------- */
+.bv{position:fixed;inset:0;z-index:60;background:var(--page);overflow-y:auto;
+    padding:calc(28px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) calc(28px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px))}
+.bv-in{max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+.bv-logo{width:64px;height:64px;border-radius:16px;background:var(--brand);display:grid;place-items:center}
+.bv-logo svg{width:38px;height:38px}
+.bv h2{font-size:1.65rem;font-weight:600;letter-spacing:-.02em;line-height:1.15;text-wrap:balance}
+.bv h2 em{font-style:normal;color:var(--credit)}
+.bv p.lead{color:var(--ink-soft);font-size:.95rem;margin-top:-10px}
+.bv ol{list-style:none;display:flex;flex-direction:column;gap:0;border:1px solid var(--rule);border-radius:var(--r-lg);overflow:hidden}
+.bv li{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start;padding:14px;background:var(--panel);border-top:1px solid var(--rule)}
+.bv li:first-child{border-top:0}
+.bv li .n{width:28px;height:28px;border-radius:50%;background:var(--brand-deep);color:var(--credit);display:grid;place-items:center;font-weight:600;font-size:.85rem}
+.bv li b{display:block;font-weight:600;font-size:.92rem}
+.bv li span{color:var(--muted);font-size:.82rem}
+.bv-exemplo{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:14px;border-radius:var(--r-lg);background:var(--brand-deep)}
+.bv-exemplo span{font-size:.8rem;color:rgba(255,255,255,.75)}
+.bv-exemplo b{font-size:1.3rem;font-weight:600;color:#fff;white-space:nowrap}
+.bv-acoes{display:flex;flex-direction:column;gap:10px}
+.bv-acoes .btn{width:100%;padding:13px;font-size:.95rem}
+.bv small{color:var(--muted);font-size:.75rem;text-align:center}
+.btn-instalar{font:inherit;font-size:.78rem;font-weight:600;padding:6px 11px;border-radius:999px;
+  border:1px solid var(--credit-line);background:var(--brand-deep);color:var(--credit);cursor:pointer;white-space:nowrap}
+.inst-ios{margin-top:4px;padding:12px;border-radius:var(--r);background:var(--night);color:var(--night-ink);font-size:.82rem}
+
 /* ---------- painéis ---------- */
 .card{background:var(--panel);border:1px solid var(--rule);border-radius:var(--r-lg);padding:18px 16px}
 .card h2{font-size:.95rem;font-weight:600;letter-spacing:-.01em;margin-bottom:14px}
@@ -394,11 +420,32 @@ footer{text-align:center;font-size:.72rem;color:var(--muted);padding:10px 10px 0
   <meta name="apple-mobile-web-app-title" content="Chapas">
 </head>
 <body>
+<div class="bv" id="boasVindas" hidden role="dialog" aria-labelledby="bvTit">
+  <div class="bv-in">
+    <div class="bv-logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3" width="15" height="15.5" rx="3"/><path d="M4.5 11.5h15M8 18.5v2.2M16 18.5v2.2M7.6 15h.01M16.4 15h.01M7.5 6.5h9"/></svg></div>
+    <h2 id="bvTit">Sabe quanto vai receber <em>antes</em> do recibo chegar.</h2>
+    <p class="lead">Feita por um motorista, para motoristas. Grátis, sem conta, e os seus dados ficam só no seu telemóvel.</p>
+    <ol>
+      <li><span class="n">1</span><div><b>Carregue o PDF das chapas</b><span>As chapas novas de cada mês substituem as antigas sozinhas.</span></div></li>
+      <li><span class="n">2</span><div><b>Registe os dias que faz</b><span>Escolhe a chapa e a data. Horas extra, noite, folgas e refeição são calculadas como no recibo.</span></div></li>
+      <li><span class="n">3</span><div><b>Veja quanto vai receber</b><span>No fim do mês: valor aproximado, IRS incluído, e um quadro igual ao recibo para conferir.</span></div></li>
+    </ol>
+    <div class="bv-exemplo"><span>Exemplo: folga vendida, chapa de 11h42</span><b>+ 144,68 €</b></div>
+    <div class="bv-acoes">
+      <button type="button" class="btn" id="bvCarregar">Carregar as minhas chapas</button>
+      <button type="button" class="btn btn-quiet" id="bvInstalar" hidden>Instalar no telemóvel</button>
+      <div class="inst-ios" id="bvIos" hidden>No iPhone: toque em <b>Partilhar</b> (o quadrado com a seta) e depois em <b>Adicionar ao ecrã principal</b>.</div>
+      <button type="button" class="btn btn-quiet" id="bvFechar">Ver a app primeiro</button>
+    </div>
+    <small>Valores calculados a partir do vencimento base de 1.178,49 €. Pode mudar em Ajustes.</small>
+  </div>
+</div>
 <div class="wrap">
 
   <header>
     <h1>Chapas &amp; Vencimento</h1>
-    <span class="sub">Escala e vencimento do motorista</span>
+    <button type="button" class="btn-instalar" id="btnInstalarTopo" hidden>Instalar app</button>
+    <span class="sub" id="subTopo">Escala e vencimento do motorista</span>
   </header>
 
   <div class="pane" id="pane-chapa" role="tabpanel" aria-labelledby="tab-chapa">
@@ -2262,6 +2309,43 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
   if (!/claude|claudeusercontent/.test(location.hostname))
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
+
+
+/* ============ BOAS-VINDAS E INSTALAR ============ */
+(function(){
+  const LS = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
+  const LSset = (k,v) => { try { localStorage.setItem(k,v); } catch(e){} };
+  const instalada = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  let pedido = null;
+  const btnTopo = $('btnInstalarTopo'), btnBv = $('bvInstalar');
+  function mostrarInstalar(){
+    if (instalada) return;
+    if (pedido || ios){ btnTopo.hidden = false; $('subTopo').hidden = true; btnBv.hidden = !pedido; $('bvIos').hidden = !(ios && !pedido); }
+  }
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pedido = e; mostrarInstalar(); });
+  window.addEventListener('appinstalled', () => { btnTopo.hidden = true; btnBv.hidden = true; $('subTopo').hidden = false; toast('App instalada'); });
+  async function instalar(){
+    if (pedido){ pedido.prompt(); try { await pedido.userChoice; } catch(e){} pedido = null; btnTopo.hidden = true; btnBv.hidden = true; $('subTopo').hidden = false; }
+    else if (ios) toast('Toque em Partilhar e depois em Adicionar ao ecrã principal');
+  }
+  btnTopo.addEventListener('click', instalar);
+  btnBv.addEventListener('click', instalar);
+  mostrarInstalar();
+
+  const bv = $('boasVindas');
+  const fechar = () => { bv.hidden = true; LSset('chapas-boasvindas', '1'); };
+  $('bvFechar').addEventListener('click', fechar);
+  $('bvCarregar').addEventListener('click', () => {
+    fechar();
+    const tab = document.querySelector('.tabbar button[data-pane="ajustes"]');
+    if (tab) tab.click();
+    const card = $('cardUpload'); if (card) card.scrollIntoView({block:'start'});
+    const fc = $('fileChapas'); if (fc) fc.click();
+  });
+  const temChapas = () => ['util','sabado','domingo'].some(t => Object.keys(dadosChapas[t] || {}).length);
+  setTimeout(() => { if (!LS('chapas-boasvindas') && !temChapas()) bv.hidden = false; }, 900);
+})();
 
 /* ============ ARRANQUE ============ */
 (async function init(){
