@@ -606,7 +606,7 @@ footer{text-align:center;font-size:.72rem;color:var(--muted);padding:10px 10px 0
     </div>
     <div class="stats">
       <div class="stat wide">
-        <div class="k">A receber este mês (aproximado)</div>
+        <div class="k" id="mRecebeK">Vai receber no recibo do mês seguinte (aproximado)</div>
         <div class="v" id="mValor">0,00 €</div>
         <div class="k k-foot" id="mComBase"></div>
       </div>
@@ -2201,7 +2201,7 @@ function pintarLiquido(doMes, val){
   const linha = (rot, v, cls, sub) =>
     `<div class="lr ${cls||''}"><span>${rot}${sub ? `<small>${sub}</small>` : ''}</span><span>${v}</span></div>`;
 
-  let h = linha('Bruto do mês', eur(bruto), '', `vencimento base + ${eur(val)} de acréscimos`);
+  let h = linha('Bruto do recibo', eur(bruto), '', `vencimento base + ${eur(val)} do trabalho deste mês`);
   if (cfg.subIsento && subs > 0)
     h += linha('Base de incidência', eur(trib), '', `sem os ${eur(subs)} de subsídio de refeição`);
   h += linha(`Segurança Social ${cfg.ss || 0}%`, '− ' + eur(ss), 'neg');
@@ -2239,10 +2239,14 @@ function pintarMes(){
   $('mNoite').textContent = hm(noi);
   $('mExtra').textContent = hm(ext);
   const L = pintarLiquido(doMes, val);
+  // o trabalho deste mês (horas extra, folgas, refeição) é pago no recibo do mês seguinte
+  const prox = new Date(a, m, 1).toLocaleDateString('pt-PT', {month:'long'});
+  const este = new Date(a, m-1, 1).toLocaleDateString('pt-PT', {month:'long'});
+  $('mRecebeK').textContent = `Vai receber no recibo de ${prox} (aproximado)`;
   $('mValor').textContent = '≈ ' + eur(L.liq);
   $('mComBase').innerHTML = L.subs > 0
-    ? `<b>${eur(L.liq - L.subs)}</b> na conta + <b>${eur(L.subs)}</b> no cartão refeição`
-    : `Bruto ${eur(L.bruto)}`;
+    ? `<b>${eur(L.liq - L.subs)}</b> na conta + <b>${eur(L.subs)}</b> no cartão refeição<br>vencimento de ${prox} + extras feitos em ${este}`
+    : `vencimento de ${prox} + extras feitos em ${este}`;
   pintarDesatualizados(doMes);
   pintarRecibo(doMes, red);
 
