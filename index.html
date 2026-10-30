@@ -1985,16 +1985,32 @@ function noiteAtual(r){
   iv.slice().sort((x,y) => x[0]-y[0]).forEach(([a,b]) => { if (falta <= 0) return; const d = Math.min(falta, b - a); noiteExtra1 += minutosNoite(a, a + d); falta -= d; });
   return {noite, noiteExtra, noiteExtra1};
 }
+/* volta a escolher a refeição (normal ou penalizada) pela pausa da chapa, com os horários atuais */
+function refeicaoAtual(r){
+  if (!cfg.refeicaoAuto || !r.opc) return null;
+  const c = (dadosChapas[r.dia] || {})[r.chapa];
+  if (!c) return null;
+  if ((r.minutos || 0) < 240) return {opc: {...r.opc, sub:false, ref:false}};
+  const pen = c.pausa ? refeicaoPenalizada(span(c.pausa)) : false;
+  return {opc: {...r.opc, sub: !pen, ref: pen}};
+}
+function registoAtual(r){
+  return {...r, ...(noiteAtual(r) || {}), ...(refeicaoAtual(r) || {})};
+}
 function valorRecalculado(r){
   if (!r.opc) return null;
-  const n = noiteAtual(r);
-  return contaDoRegisto(n ? {...r, ...n} : r, taxasDoMomento());
+  return contaDoRegisto(registoAtual(r), taxasDoMomento());
+}
+/* registos cuja refeição mudaria com os horários atuais (mesmo que o total seja parecido) */
+function refeicaoMudou(r){
+  const x = refeicaoAtual(r);
+  return !!x && (!!x.opc.sub !== !!r.opc.sub || !!x.opc.ref !== !!r.opc.ref);
 }
 /* registos cujo valor gravado já não bate com as definições atuais */
 function desatualizados(lista){
   return lista.filter(r => {
     const v = valorRecalculado(r);
-    return v !== null && Math.abs(v - valorDoRegisto(r)) >= 0.005;
+    return v !== null && (Math.abs(v - valorDoRegisto(r)) >= 0.005 || refeicaoMudou(r));
   });
 }
 /* ============ AVISO NO CALENDÁRIO ============ */
@@ -2608,7 +2624,7 @@ function confirmar(msg, sim, soInfo){
       if (!ids.includes(r.id)) return;
       const v = valorRecalculado(r);
       if (v === null) return;
-      const n = noiteAtual(r); if (n) Object.assign(r, n);
+      Object.assign(r, registoAtual(r));
       r.valor = v;
       r.taxas = taxasDoMomento();
     });
