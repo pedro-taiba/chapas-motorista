@@ -573,7 +573,7 @@ footer{text-align:center;font-size:.72rem;color:var(--muted);padding:10px 10px 0
         <label class="check"><input type="checkbox" id="ckNoite" checked>
           <span>Suplemento noturno</span><span class="amt" id="amtNoite"></span></label>
         <label class="check"><input type="checkbox" id="ckRefPen">
-          <span>1.ª refeição penalizada (vai para a conta)</span><span class="amt" id="amtRefPen"></span></label>
+          <span>1.ª refeição penalizada (cartão)</span><span class="amt" id="amtRefPen"></span></label>
       </div>
       <p class="note" id="notaRefeicao"></p>
 
@@ -2353,11 +2353,12 @@ function pintarDesatualizados(doMes){
 }
 
 function pintarLiquido(doMes, val){
-  // cartão: só o subsídio de refeição; a 1.ª refeição penalizada e os reembolsos ACN vão para a conta, sem descontos
+  // cartão refeição: subsídio de refeição + 1.ª refeição penalizada (como no recibo: "Valor Cartão Refeição");
+  // os reembolsos ACN vão para a conta; nenhum destes tem descontos
   const subs  = doMes.reduce((s,r) => s + ((!r.opc || r.opc.sub)
-    ? ((r.taxas && r.taxas.subsidio) || cfg.subsidio) : 0), 0);
-  const isentosConta = doMes.reduce((s,r) => s + ((r.opc && r.opc.ref) ? ((r.taxas && r.taxas.refPen) || cfg.refPen) : 0)
-    + (cfg.acn ? acnDoRegisto(r) : 0), 0);
+    ? ((r.taxas && r.taxas.subsidio) || cfg.subsidio) : 0)
+    + ((r.opc && r.opc.ref) ? ((r.taxas && r.taxas.refPen) || cfg.refPen) : 0), 0);
+  const isentosConta = doMes.reduce((s,r) => s + (cfg.acn ? acnDoRegisto(r) : 0), 0);
   const bruto = cfg.vencBase + val;
   const trib  = cfg.subIsento ? bruto - subs - isentosConta : bruto;
   const ss    = trib * ((cfg.ss  || 0) / 100);
@@ -2465,12 +2466,11 @@ function pintarRecibo(doMes, red){
     {nome:'Horas extra',            dica:'acima das 8h nos dias normais', ks:['extraD50','extraN50','extraD75','extraN75']},
     {nome:'Folgas trabalhadas',     dica:'descanso complementar e semanal', ks:['descComplD','descComplN','descSupD','descSupN','descSemD','descSemN','descSemSupD','descSemSupN']},
     {nome:'Feriados',               dica:'', ks:['feriadoD','feriadoN','feriadoSuplD','feriadoSuplN']},
-    {nome:'Refeição penalizada',    dica:'pausa fora da hora das refeições, vai para a conta', ks:['refPen']},
     {nome:'Reembolsos ACN',         dica:'entradas cedo, saídas tarde e madrugada', ks:['acn']},
     {nome:'Noite',                  dica:'suplemento das horas noturnas', ks:['noturno']},
     {nome:'Descanso curto',         dica:'menos de 11h entre dois dias', ks:['redDescanso']},
   ];
-  const refL = g.filter(l => l.k === 'subsidio');
+  const refL = g.filter(l => l.k === 'subsidio' || l.k === 'refPen');
   const refV = refL.reduce((a,l) => a + l.v, 0), refD = refL.reduce((a,l) => a + (l.dias || 0), 0);
   const totExtra = tot - refV;
   const porK = Object.fromEntries(g.map(l => [l.k, l]));
