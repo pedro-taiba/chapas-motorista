@@ -537,7 +537,8 @@ footer{text-align:center;font-size:.72rem;color:var(--muted);padding:10px 10px 0
         <div class="opts quad" id="gEscala" role="group" aria-label="Tipo de dia na escala">
           <button type="button" data-v="trabalho" aria-pressed="true">Dia de trabalho</button>
           <button type="button" data-v="folga" aria-pressed="false">Folga gozada depois</button>
-          <button type="button" data-v="folgaVend" aria-pressed="false">Folga vendida</button>
+          <button type="button" data-v="folgaVend" aria-pressed="false">Folga vendida (1.ª da semana)</button>
+          <button type="button" data-v="folgaSem" aria-pressed="false">Folga vendida (2.ª da semana)</button>
           <button type="button" data-v="feriado" aria-pressed="false">Feriado</button>
         </div>
         <p class="q later" id="qAtrib">A chapa já estava atribuída a si?</p>
@@ -568,11 +569,11 @@ footer{text-align:center;font-size:.72rem;color:var(--muted);padding:10px 10px 0
 
       <div class="checks">
         <label class="check"><input type="checkbox" id="ckSub" checked>
-          <span>Subsídio de refeição</span><span class="amt" id="amtSub"></span></label>
+          <span>Subsídio de refeição (cartão)</span><span class="amt" id="amtSub"></span></label>
         <label class="check"><input type="checkbox" id="ckNoite" checked>
           <span>Suplemento noturno</span><span class="amt" id="amtNoite"></span></label>
         <label class="check"><input type="checkbox" id="ckRefPen">
-          <span>1.ª refeição penalizada</span><span class="amt" id="amtRefPen"></span></label>
+          <span>1.ª refeição penalizada (vai para a conta)</span><span class="amt" id="amtRefPen"></span></label>
       </div>
       <p class="note" id="notaRefeicao"></p>
 
@@ -741,6 +742,9 @@ footer{text-align:center;font-size:.72rem;color:var(--muted);padding:10px 10px 0
       <label class="check check-flush">
         <input type="checkbox" id="cfg_refeicaoAuto">
         <span>Escolher a refeição sozinho pela hora da pausa (normal ou penalizada)</span></label>
+      <label class="check check-flush">
+        <input type="checkbox" id="cfg_acn">
+        <span>Contar reembolsos ACN (1,40 € / 2,20 € / 2,55 € conforme o horário)</span></label>
       <div class="grid2 grid2-top">
         <div class="fld-wrap"><label class="fld" for="cfg_janelaAlmoco">Pausa de almoço entre</label>
           <input type="text" inputmode="numeric" id="cfg_janelaAlmoco" placeholder="11:00 – 14:00"></div>
@@ -757,7 +761,7 @@ footer{text-align:center;font-size:.72rem;color:var(--muted);padding:10px 10px 0
           <input type="number" step="0.5" min="1" id="cfg_limiteDiario"></div>
         <div class="fld-wrap"><label class="fld" for="cfg_limiteDescanso">Descanso mínimo entre dias (horas)</label>
           <input type="number" step="0.5" min="0" id="cfg_limiteDescanso"></div>
-        <div class="fld-wrap"><label class="fld" for="cfg_periodoNoite">Período noturno</label>
+        <div class="fld-wrap"><label class="fld" for="cfg_periodoNoite">Período noturno (admitidos até 2015: 20:00 – 07:00)</label>
           <input type="text" inputmode="numeric" id="cfg_periodoNoite" placeholder="20:00 – 07:00"></div>
       </div>
 
@@ -848,13 +852,20 @@ const RUBRICAS = [
   {id:'descSupD',     nome:'Descanso complementar, horas além das 8h — dia',   def:14.73, sel:false},
   {id:'descSupN',     nome:'Descanso complementar, horas além das 8h — noite', def:18.41, sel:false},
   {id:'redDescanso',  nome:'Redução do tempo de descanso',  def:4.91, sel:false},
-  {id:'folgaVendD',   nome:'Folga vendida — dia',         def:11.90, taxa:false},
-  {id:'folgaVendN',   nome:'Folga vendida — noite',       def:14.87, taxa:false},
-  {id:'feriadoD',     nome:'Feriado dia',                 def:9.82},
-  {id:'feriadoSuplD', nome:'Feriado suplementar dia',     def:14.74},
-  {id:'feriadoSuplN', nome:'Feriado suplementar noite',   def:18.42}
+  {id:'folgaVendD',   nome:'Folga vendida — 1.ª folga da semana',  def:11.90, taxa:false},
+  {id:'folgaVendN',   nome:'Folga vendida — 1.ª folga, noite',     def:14.87, taxa:false},
+  {id:'folgaSemD',    nome:'Folga vendida — 2.ª folga da semana',  def:9.82, taxa:false},
+  {id:'folgaSemN',    nome:'Folga vendida — 2.ª folga, noite',     def:12.27, taxa:false},
+  {id:'descSemD',     nome:'Descanso semanal dia',                 def:9.82, sel:false},
+  {id:'descSemN',     nome:'Descanso semanal noite',               def:12.27, sel:false},
+  {id:'descSemSupD',  nome:'Descanso semanal, horas além das 8h — dia',   def:14.73, sel:false},
+  {id:'descSemSupN',  nome:'Descanso semanal, horas além das 8h — noite', def:18.41, sel:false},
+  {id:'feriadoD',     nome:'Feriado',                     def:9.82},
+  {id:'feriadoN',     nome:'Feriado noite',               def:12.27, sel:false},
+  {id:'feriadoSuplD', nome:'Feriado suplementar dia',     def:14.74, sel:false},
+  {id:'feriadoSuplN', nome:'Feriado suplementar noite',   def:18.42, sel:false}
 ];
-const PAR_NOITE = {extraD75:'extraN75', extraD50:'extraN50', descComplD:'descComplN', folgaVendD:'folgaVendN', feriadoSuplD:'feriadoSuplN'};
+const PAR_NOITE = {extraD75:'extraN75', extraD50:'extraN50', descComplD:'descComplN', folgaVendD:'folgaVendN', folgaSemD:'folgaSemN'};
 const PAR_DIA = Object.fromEntries(Object.entries(PAR_NOITE).map(([d,n])=>[n,d]));
 const RUB_NORMAL = {id:'normal', nome:'Serviço normal — pago no vencimento base'};
 /* Como a empresa paga cada rubrica (confirmado com o recibo de setembro 2026):
@@ -864,10 +875,15 @@ const RUB_NORMAL = {id:'normal', nome:'Serviço normal — pago no vencimento ba
    - folga trabalhada/vendida: 8h a "descanso complementar" (dia/noite) e o
      resto a "descanso complementar suplementar" (dia/noite).
    - fora da escala / feriado suplementar: todas as horas à taxa da rubrica. */
+/* Regras da Circular 25/2023 (Gestão de Pessoas):
+   - 1.ª folga da semana (seg–dom) trabalhada: descanso complementar (8h) + suplementar (9.ª hora e seguintes)
+   - 2.ª folga da semana: descanso semanal (8h) + suplementar
+   - feriado: feriado (8h) + feriado suplementar; se calhar em folga, paga-se como a folga (mesmo valor/hora) */
 const familia = id =>
   id === 'normal' ? 'normal'
-  : id === 'feriadoD' ? 'feriado'
+  : /^feriado[DN]$/.test(id) ? 'feriado'
   : /^(descCompl|folgaVend)/.test(id) ? 'descanso'
+  : /^(descSem|folgaSem)/.test(id) ? 'semanal'
   : /^extra[DN]75$/.test(id) ? 'fora'
   : /^feriadoSupl/.test(id) ? 'feriadoSupl' : 'normal';
 /* Valores automáticos: cada rubrica é um múltiplo do valor/hora base
@@ -879,7 +895,8 @@ const FATORES = {
   extraD50: 1.5, extraN50: 1.875, extraD75: 1.75, extraN75: 2.1875, noturno: 0.25,
   descComplD: 9.82 / H_REF, descComplN: 12.27 / H_REF,
   descSupD: 14.73 / H_REF,  descSupN: 18.41 / H_REF,
-  redDescanso: 4.91 / H_REF, feriadoD: 9.82 / H_REF,
+  redDescanso: 4.91 / H_REF, feriadoD: 9.82 / H_REF, feriadoN: 12.27 / H_REF,
+  descSemD: 9.82 / H_REF, descSemN: 12.27 / H_REF, descSemSupD: 14.73 / H_REF, descSemSupN: 18.41 / H_REF,
   feriadoSuplD: 14.74 / H_REF, feriadoSuplN: 18.42 / H_REF
 };
 /* Refeição automática: se a pausa da chapa começa dentro da hora do almoço
@@ -897,6 +914,11 @@ function refeicaoPenalizada(sp){
 function refeicaoAuto(){
   const nota = $('notaRefeicao');
   if (!cfg.refeicaoAuto || !atual){ if (nota) nota.textContent = ''; return; }
+  if (atual.minutos < 240){
+    $('ckSub').checked = false; $('ckRefPen').checked = false;
+    if (nota) nota.textContent = 'Menos de 4 horas de trabalho: não dá direito a refeição.';
+    recalcular(); return;
+  }
   const pen = refeicaoPenalizada(atual.temP2 ? atual.sp : null);
   $('ckSub').checked = !pen;
   $('ckRefPen').checked = pen;
@@ -928,10 +950,15 @@ function aplicarTaxasAuto(){
 }
 const RUB_SEL = RUBRICAS.filter(r => r.sel !== false);
 const RUB_TAXA = RUBRICAS.filter(r => r.taxa !== false);
-const taxaMostrada = id => familia(id) === 'descanso' ? cfg[id.endsWith('N') ? 'descComplN' : 'descComplD'] : cfg[id];
+const taxaMostrada = id => {
+  const f = familia(id), n = id.endsWith('N');
+  return f === 'descanso' ? cfg[n ? 'descComplN' : 'descComplD']
+       : f === 'semanal'  ? cfg[n ? 'descSemN' : 'descSemD']
+       : f === 'feriado'  ? cfg.feriadoD : cfg[id];
+};
 const nomeRubrica = id => id === 'normal' ? 'Serviço normal' : (RUBRICAS.find(r => r.id === id) || {nome:'—'}).nome;
 
-const CFG_DEFAULT = {versao:5, irsAuto:true, irsTabela:'I', dependentes:0, taxasAuto:true, refeicaoAuto:true, periodoNoite:'20:00 – 07:00', janelaAlmoco:'11:00 – 14:00', janelaJantar:'18:00 – 21:00', limiteDescanso:11, vencBase:1178.49, horasSemana:40, subsidio:7.20, noturno:1.70, refPen:7.45, limiteDiario:8, splitExtra:true, ss:11, irs:0, outros:0, subIsento:true};
+const CFG_DEFAULT = {versao:6, irsAuto:true, irsTabela:'I', dependentes:0, taxasAuto:true, refeicaoAuto:true, periodoNoite:'20:30 – 06:30', janelaAlmoco:'11:00 – 14:30', janelaJantar:'19:30 – 22:00', acn:false, limiteDescanso:11, vencBase:1178.49, horasSemana:40, subsidio:7.20, noturno:1.70, refPen:7.45, limiteDiario:8, splitExtra:true, ss:11, irs:0, outros:0, subIsento:true};
 RUBRICAS.forEach(r => CFG_DEFAULT[r.id] = r.def);
 
 const K_CFG = 'chapas-config', K_REG = 'chapas-registos', K_TS = 'chapas-guardado', K_MINHAS = 'chapas-minhas';
@@ -955,7 +982,8 @@ function aplicarGuia(){
   if (escalaDia === 'trabalho')      id = naEscala ? 'normal' : 'extraD75';
   else if (escalaDia === 'folga')    id = 'descComplD';
   else if (escalaDia === 'folgaVend')id = 'folgaVendD';
-  else                               id = naEscala ? 'feriadoD' : 'feriadoSuplD';
+  else if (escalaDia === 'folgaSem') id = 'folgaSemD';
+  else                               id = 'feriadoD';
 
   if (atual.noite > atual.minutos/2 && PAR_NOITE[id]) id = PAR_NOITE[id];
 
@@ -976,9 +1004,9 @@ function pintarGuia(){
     normal:       'Horas da escala: pagas pelo vencimento base, com os subsídios à parte.',
     extra:        'Trabalho para além do que a escala previa nesse dia.',
     descCompl:    'Chapa feita em folga, com dia de descanso a gozar depois.',
-    folgaVend:    'Folga vendida: abdicou do dia compensatório, pago a 75%.',
-    feriado:      'Feriado que já era dia de trabalho na escala.',
-    feriadoSupl:  'Feriado que era dia de folga, ou trabalho a mais no feriado.'
+    folgaVend:    '1.ª folga da semana (seg–dom): 8h a descanso complementar, o resto a descanso complementar suplementar.',
+    folgaSem:     '2.ª folga da semana (seg–dom): 8h a descanso semanal, o resto a descanso semanal suplementar.',
+    feriado:      'Feriado: 8h a feriado, o resto a feriado suplementar. Se o feriado calhar numa folga, escolha a folga (o valor/hora é o mesmo).'
   };
   const id = $('rubricaSelect').value;
   $('guiaNota').textContent =
@@ -986,7 +1014,7 @@ function pintarGuia(){
     id.startsWith('extra') ? nota.extra :
     id.startsWith('descCompl') ? nota.descCompl :
     id.startsWith('folgaVend') ? nota.folgaVend :
-    id.startsWith('feriadoSupl') ? nota.feriadoSupl : nota.feriado;
+    id.startsWith('folgaSem') ? nota.folgaSem : nota.feriado;
 }
 
 const $ = id => document.getElementById(id);
@@ -1188,6 +1216,14 @@ async function carregar(){
       cfg.versao = 5;
       gravarCfg();
     }
+    // Circular 25/2023: horários das refeições e período noturno (admitidos desde 2016)
+    if (cfg.versao < 6){
+      if (!cfg.janelaAlmoco || cfg.janelaAlmoco === '11:00 – 14:00') cfg.janelaAlmoco = '11:00 – 14:30';
+      if (!cfg.janelaJantar || cfg.janelaJantar === '18:00 – 21:00') cfg.janelaJantar = '19:30 – 22:00';
+      if (!cfg.periodoNoite || cfg.periodoNoite === '20:00 – 07:00') cfg.periodoNoite = '20:30 – 06:30';
+      cfg.versao = 6;
+      gravarCfg();
+    }
   }
   aplicarTaxasAuto();
   aplicarNoite();
@@ -1277,6 +1313,7 @@ function recarregarCampos(){
   const si = $('cfg_subIsento');  if (si) si.checked = !!cfg.subIsento;
   const ta = $('cfg_taxasAuto'); if (ta) ta.checked = !!cfg.taxasAuto;
   const ra = $('cfg_refeicaoAuto'); if (ra) ra.checked = !!cfg.refeicaoAuto;
+  const acn = $('cfg_acn'); if (acn) acn.checked = !!cfg.acn;
   const ia = $('cfg_irsAuto'); if (ia){ ia.checked = !!cfg.irsAuto; $('cfg_irs').readOnly = !!cfg.irsAuto; }
   const it = $('cfg_irsTabela'); if (it) it.value = cfg.irsTabela || 'I';
   const idp = $('cfg_dependentes'); if (idp) idp.value = cfg.dependentes || 0;
@@ -1562,6 +1599,9 @@ function montarDefinicoes(){
   ia.addEventListener('change', () => { cfg.irsAuto = ia.checked; $('cfg_irs').readOnly = ia.checked; gravarCfg(); pintarMes(); });
   it.addEventListener('change', () => { cfg.irsTabela = it.value; gravarCfg(); pintarMes(); });
   idp.addEventListener('change', () => { cfg.dependentes = Math.max(0, parseInt(idp.value, 10) || 0); idp.value = cfg.dependentes; gravarCfg(); pintarMes(); });
+  const acn = $('cfg_acn');
+  acn.checked = !!cfg.acn;
+  acn.addEventListener('change', () => { cfg.acn = acn.checked; gravarCfg(); recalcular(); pintarMes(); });
   const ra = $('cfg_refeicaoAuto');
   ra.checked = !!cfg.refeicaoAuto;
   ra.addEventListener('change', () => { cfg.refeicaoAuto = ra.checked; gravarCfg(); refeicaoAuto(); });
@@ -1817,9 +1857,11 @@ const ROTULO = {
   noturno:'Trabalho noturno',
   descComplD:'Descanso complementar D', descComplN:'Descanso complementar N',
   descSupD:'Descanso complem. sup. D', descSupN:'Descanso complem. sup. N',
-  feriadoD:'Feriado', feriadoSuplD:'Feriado suplementar D', feriadoSuplN:'Feriado suplementar N',
+  descSemD:'Descanso semanal D', descSemN:'Descanso semanal N',
+  descSemSupD:'Descanso semanal sup. D', descSemSupN:'Descanso semanal sup. N',
+  feriadoD:'Feriado D', feriadoN:'Feriado N', feriadoSuplD:'Feriado suplementar D', feriadoSuplN:'Feriado suplementar N',
   redDescanso:'Red. tempo descanso',
-  subsidio:'Sub. de refeição', refPen:'1.ª ref. penalizada'
+  subsidio:'Sub. de refeição (cartão)', refPen:'1.ª ref. penalizada ACN', acn:'Reembolsos ACN'
 };
 const ORDEM_REC = Object.keys(ROTULO);
 function linhasDoRegisto(r, t){
@@ -1839,8 +1881,13 @@ function linhasDoRegisto(r, t){
   const fam = familia(r.rubrica);
   const noite = !r.opc || r.opc.noite;
 
-  if (fam === 'normal' || fam === 'feriado'){
-    if (fam === 'feriado') add('feriadoD', base);
+  if (fam === 'feriado'){
+    add('feriadoD', baseD); add('feriadoN', baseN);
+    add('feriadoSuplD', ex - exN); add('feriadoSuplN', exN);
+  } else if (fam === 'semanal'){
+    add('descSemD', baseD); add('descSemN', baseN);
+    add('descSemSupD', ex - exN); add('descSemSupN', exN);
+  } else if (fam === 'normal'){
     add('extraD50', e1 - e1N); add('extraN50', e1N);
     add('extraD75', e2 - e2N); add('extraN75', e2N);
     if (noite) add('noturno', baseN);
@@ -1854,7 +1901,22 @@ function linhasDoRegisto(r, t){
   }
   if (!r.opc || r.opc.sub) L.push({k:'subsidio', dias:1, v: taxa('subsidio')});
   if (r.opc && r.opc.ref)  L.push({k:'refPen',   dias:1, v: taxa('refPen')});
+  if (cfg.acn){ const a = acnDoRegisto(r); if (a > 0) L.push({k:'acn', dias:1, v:a}); }
   return L;
+}
+/* Reembolsos ACN (Circular 25/2023): entrada antes das 06:00 e/ou saída depois da 01:00 → 1,40 €;
+   entrada até às 11:59 e saída depois das 21:00 → 2,20 €; 3h ou mais de trabalho entre as 24:00 e as 05:00 → 2,55 € */
+function acnDoRegisto(r){
+  const h = horarioDoRegisto(r); if (!h) return 0;
+  let v = 0;
+  if (h.ini < 360 || h.fim > 1500) v += 1.40;
+  if (h.ini <= 719 && h.fim > 1260) v += 2.20;
+  const c = (dadosChapas[r.dia] || {})[r.chapa];
+  const bl = c ? blocosDe(c).map(b => [b.a, b.b]) : [[h.ini, h.fim]];
+  if (r.avulsas) bl.push([h.fim - r.avulsas, h.fim]);
+  const madrugada = bl.reduce((s,[a,b]) => s + Math.max(0, Math.min(b, 1740) - Math.max(a, 1440)), 0);
+  if (madrugada >= 180) v += 2.55;
+  return v;
 }
 function agruparLinhas(L){
   const g = {};
@@ -1905,9 +1967,28 @@ function valorDoRegisto(r){
   return contaDoRegisto(r, taxasDoMomento());
 }
 /* quanto daria esse mesmo dia com as taxas de hoje */
+/* volta a calcular os minutos de noite de um registo com o período noturno atual */
+function noiteAtual(r){
+  const c = (dadosChapas[r.dia] || {})[r.chapa];
+  if (!c) return null;
+  const bl = blocosDe(c).map(b => [b.a, b.b]);
+  const fimChapa = bl[bl.length-1][1];
+  if (r.avulsas) bl.push([fimChapa, fimChapa + r.avulsas]);
+  const total = bl.reduce((s,[a,b]) => s + (b - a), 0);
+  if (Math.abs(total - (r.minutos || 0)) > 1) return null;   // a chapa mudou desde o registo
+  const noite = bl.reduce((s,[a,b]) => s + minutosNoite(a,b), 0);
+  const ex = r.minExtra || 0;
+  let rest = ex, iv = [];
+  for (let i = bl.length - 1; i >= 0 && rest > 0; i--){ const [a,b] = bl[i], d = Math.min(rest, b - a); iv.push([b - d, b]); rest -= d; }
+  const noiteExtra = iv.reduce((s,[a,b]) => s + minutosNoite(a,b), 0);
+  let falta = Math.min(60, ex), noiteExtra1 = 0;
+  iv.slice().sort((x,y) => x[0]-y[0]).forEach(([a,b]) => { if (falta <= 0) return; const d = Math.min(falta, b - a); noiteExtra1 += minutosNoite(a, a + d); falta -= d; });
+  return {noite, noiteExtra, noiteExtra1};
+}
 function valorRecalculado(r){
   if (!r.opc) return null;
-  return contaDoRegisto(r, taxasDoMomento());
+  const n = noiteAtual(r);
+  return contaDoRegisto(n ? {...r, ...n} : r, taxasDoMomento());
 }
 /* registos cujo valor gravado já não bate com as definições atuais */
 function desatualizados(lista){
@@ -2256,11 +2337,13 @@ function pintarDesatualizados(doMes){
 }
 
 function pintarLiquido(doMes, val){
+  // cartão: só o subsídio de refeição; a 1.ª refeição penalizada e os reembolsos ACN vão para a conta, sem descontos
   const subs  = doMes.reduce((s,r) => s + ((!r.opc || r.opc.sub)
-    ? ((r.taxas && r.taxas.subsidio) || cfg.subsidio) : 0)
-    + ((r.opc && r.opc.ref) ? ((r.taxas && r.taxas.refPen) || cfg.refPen) : 0), 0);
+    ? ((r.taxas && r.taxas.subsidio) || cfg.subsidio) : 0), 0);
+  const isentosConta = doMes.reduce((s,r) => s + ((r.opc && r.opc.ref) ? ((r.taxas && r.taxas.refPen) || cfg.refPen) : 0)
+    + (cfg.acn ? acnDoRegisto(r) : 0), 0);
   const bruto = cfg.vencBase + val;
-  const trib  = cfg.subIsento ? bruto - subs : bruto;
+  const trib  = cfg.subIsento ? bruto - subs - isentosConta : bruto;
   const ss    = trib * ((cfg.ss  || 0) / 100);
   const variaveis = Math.max(0, trib - cfg.vencBase);
   const irs   = cfg.irsAuto
@@ -2275,7 +2358,7 @@ function pintarLiquido(doMes, val){
 
   let h = linha('Bruto do recibo', eur(bruto), '', `vencimento base + ${eur(val)} do trabalho deste mês`);
   if (cfg.subIsento && subs > 0)
-    h += linha('Base de incidência', eur(trib), '', `sem os ${eur(subs)} de subsídio de refeição`);
+    h += linha('Base de incidência', eur(trib), '', `sem ${eur(subs + isentosConta)} de refeição e reembolsos, que não têm descontos`);
   h += linha(`Segurança Social ${cfg.ss || 0}%`, '− ' + eur(ss), 'neg');
   h += linha(cfg.irsAuto ? `Retenção de IRS ≈ ${irsPct.toFixed(1).replace('.', ',')}%` : `Retenção de IRS ${cfg.irs || 0}%`, '− ' + eur(irs), 'neg',
     cfg.irsAuto ? 'tabela de retenção 2026, calculada sozinha' : '');
@@ -2364,12 +2447,14 @@ function pintarRecibo(doMes, red){
   // resumo simples por grupos; o detalhe linha a linha fica escondido
   const GRUPOS = [
     {nome:'Horas extra',            dica:'acima das 8h nos dias normais', ks:['extraD50','extraN50','extraD75','extraN75']},
-    {nome:'Folgas trabalhadas',     dica:'folgas vendidas e descanso complementar', ks:['descComplD','descComplN','descSupD','descSupN']},
-    {nome:'Feriados',               dica:'', ks:['feriadoD','feriadoSuplD','feriadoSuplN']},
+    {nome:'Folgas trabalhadas',     dica:'descanso complementar e semanal', ks:['descComplD','descComplN','descSupD','descSupN','descSemD','descSemN','descSemSupD','descSemSupN']},
+    {nome:'Feriados',               dica:'', ks:['feriadoD','feriadoN','feriadoSuplD','feriadoSuplN']},
+    {nome:'Refeição penalizada',    dica:'pausa fora da hora das refeições, vai para a conta', ks:['refPen']},
+    {nome:'Reembolsos ACN',         dica:'entradas cedo, saídas tarde e madrugada', ks:['acn']},
     {nome:'Noite',                  dica:'suplemento das horas noturnas', ks:['noturno']},
     {nome:'Descanso curto',         dica:'menos de 11h entre dois dias', ks:['redDescanso']},
   ];
-  const refL = g.filter(l => l.k === 'subsidio' || l.k === 'refPen');
+  const refL = g.filter(l => l.k === 'subsidio');
   const refV = refL.reduce((a,l) => a + l.v, 0), refD = refL.reduce((a,l) => a + (l.dias || 0), 0);
   const totExtra = tot - refV;
   const porK = Object.fromEntries(g.map(l => [l.k, l]));
@@ -2523,6 +2608,7 @@ function confirmar(msg, sim, soInfo){
       if (!ids.includes(r.id)) return;
       const v = valorRecalculado(r);
       if (v === null) return;
+      const n = noiteAtual(r); if (n) Object.assign(r, n);
       r.valor = v;
       r.taxas = taxasDoMomento();
     });
