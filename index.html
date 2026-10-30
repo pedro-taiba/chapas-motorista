@@ -303,6 +303,7 @@ label.fld{display:block;font-size:.78rem;color:var(--muted);margin-bottom:5px}
 .lr.fim{margin-top:4px;padding-top:12px;border-top:1px solid var(--rule-strong)}
 .lr.fim>span:first-child{color:var(--ink);font-weight:600}
 .lr.fim>span:last-child{font-size:1.35rem;font-weight:600;letter-spacing:-.02em;color:var(--credit)}
+.sub-extra{margin-top:16px;padding-top:14px;border-top:1px solid var(--rule)}
 .rec-tit{display:block;font-size:.85rem;font-weight:600;margin-bottom:10px}
 .res-grupos{display:flex;flex-direction:column;gap:14px;margin-bottom:6px}
 .rg-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
@@ -631,6 +632,11 @@ footer{text-align:center;font-size:.72rem;color:var(--muted);padding:10px 10px 0
       <div class="stat"><div class="k">Horas acima das 8h</div><div class="v" id="mExtra">0h 00m</div></div>
     </div>
     <div class="copia-aviso" id="avisoCopia" hidden><span></span><button class="btn" type="button" id="btnCopiaJa">Guardar cópia</button></div>
+    <div class="sub-extra">
+      <label class="fld" for="subExtra">Subsídio de férias ou de Natal neste recibo (€)</label>
+      <input type="number" step="0.01" min="0" inputmode="decimal" id="subExtra" placeholder="0,00">
+      <p class="note" style="margin-top:6px">Só nos meses em que a empresa o paga. Vem no recibo como "Subsídio de Férias" ou "Subsídio de Natal".</p>
+    </div>
     <div class="liquido" id="liquido"></div>
     <div class="liquido recibo" id="recibo"></div>
     <div class="desatual" id="desatual" hidden>
@@ -2359,12 +2365,14 @@ function pintarLiquido(doMes, val){
     ? ((r.taxas && r.taxas.subsidio) || cfg.subsidio) : 0)
     + ((r.opc && r.opc.ref) ? ((r.taxas && r.taxas.refPen) || cfg.refPen) : 0), 0);
   const isentosConta = doMes.reduce((s,r) => s + (cfg.acn ? acnDoRegisto(r) : 0), 0);
-  const bruto = cfg.vencBase + val;
+  // subsídio de férias ou de Natal pago neste recibo: tem Segurança Social e IRS retido à parte
+  const subExtra = Number((cfg.subsMes || {})[mesSel]) || 0;
+  const bruto = cfg.vencBase + val + subExtra;
   const trib  = cfg.subIsento ? bruto - subs - isentosConta : bruto;
   const ss    = trib * ((cfg.ss  || 0) / 100);
-  const variaveis = Math.max(0, trib - cfg.vencBase);
+  const variaveis = Math.max(0, trib - cfg.vencBase - subExtra);
   const irs   = cfg.irsAuto
-    ? retencaoIRS(Math.min(trib, cfg.vencBase), cfg.dependentes) + retencaoIRS(variaveis, 0)
+    ? retencaoIRS(Math.min(trib, cfg.vencBase), cfg.dependentes) + retencaoIRS(variaveis, 0) + retencaoIRS(subExtra, cfg.dependentes)
     : trib * ((cfg.irs || 0) / 100);
   const irsPct = trib > 0 ? irs / trib * 100 : 0;
   const out   = cfg.outros || 0;
@@ -2373,7 +2381,7 @@ function pintarLiquido(doMes, val){
   const linha = (rot, v, cls, sub) =>
     `<div class="lr ${cls||''}"><span>${rot}${sub ? `<small>${sub}</small>` : ''}</span><span>${v}</span></div>`;
 
-  let h = linha('Bruto do recibo', eur(bruto), '', `vencimento base + ${eur(val)} do trabalho deste mês`);
+  let h = linha('Bruto do recibo', eur(bruto), '', `vencimento base + ${eur(val)} do trabalho deste mês` + (subExtra ? ` + ${eur(subExtra)} de subsídio de férias/Natal` : ''));
   if (cfg.subIsento && subs > 0)
     h += linha('Base de incidência', eur(trib), '', `sem ${eur(subs + isentosConta)} de refeição e reembolsos, que não têm descontos`);
   h += linha(`Segurança Social ${cfg.ss || 0}%`, '− ' + eur(ss), 'neg');
@@ -2410,6 +2418,7 @@ function pintarMes(){
   $('mHoras').textContent = hm(min);
   $('mNoite').textContent = hm(noi);
   $('mExtra').textContent = hm(ext);
+  const se = $('subExtra'); if (se && document.activeElement !== se){ const v = (cfg.subsMes || {})[mesSel]; se.value = v ? v : ''; }
   const L = pintarLiquido(doMes, val);
   // o trabalho deste mês (horas extra, folgas, refeição) é pago no recibo do mês seguinte
   const prox = new Date(a, m, 1).toLocaleDateString('pt-PT', {month:'long'});
@@ -2646,6 +2655,12 @@ function confirmar(msg, sim, soInfo){
   $('btnApagarCarregadas').addEventListener('click', apagarCarregadas);
 
   $('btnExportar').addEventListener('click', exportar);
+  $('subExtra').addEventListener('change', () => {
+    const v = Math.max(0, parseFloat(String($('subExtra').value).replace(',', '.')) || 0);
+    cfg.subsMes = {...(cfg.subsMes || {})};
+    if (v) cfg.subsMes[mesSel] = Math.round(v * 100) / 100; else delete cfg.subsMes[mesSel];
+    gravarCfg(); pintarMes();
+  });
   $('btnCopiaJa').addEventListener('click', async () => { await exportar(); pintarAvisoCopia(); });
   $('btnImportar').addEventListener('click', () => $('fileImport').click());
   $('fileImport').addEventListener('change', e => {
