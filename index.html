@@ -304,6 +304,7 @@ label.fld{display:block;font-size:.78rem;color:var(--muted);margin-bottom:5px}
 .lr.fim>span:first-child{color:var(--ink);font-weight:600}
 .lr.fim>span:last-child{font-size:1.35rem;font-weight:600;letter-spacing:-.02em;color:var(--credit)}
 .sub-extra{margin-top:16px;padding-top:14px;border-top:1px solid var(--rule)}
+.mes-per{display:block;font-size:.72rem;font-weight:400;color:var(--muted);margin-top:2px}
 .rec-tit{display:block;font-size:.85rem;font-weight:600;margin-bottom:10px}
 .res-grupos{display:flex;flex-direction:column;gap:14px;margin-bottom:6px}
 .rg-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
@@ -614,7 +615,7 @@ footer{text-align:center;font-size:.72rem;color:var(--muted);padding:10px 10px 0
   <!-- MONTH -->
   <section class="card">
     <div class="mhead">
-      <span class="name" id="mesNome">—</span>
+      <span class="name"><span id="mesNome">—</span><small class="mes-per" id="mesPeriodo" hidden></small></span>
       <div class="nav">
         <button type="button" id="mesPrev" aria-label="Mês anterior">‹</button>
         <button type="button" id="mesNext" aria-label="Mês seguinte">›</button>
@@ -767,6 +768,8 @@ footer{text-align:center;font-size:.72rem;color:var(--muted);padding:10px 10px 0
           <input type="number" step="0.5" min="1" id="cfg_limiteDiario"></div>
         <div class="fld-wrap"><label class="fld" for="cfg_limiteDescanso">Descanso mínimo entre dias (horas)</label>
           <input type="number" step="0.5" min="0" id="cfg_limiteDescanso"></div>
+        <div class="fld-wrap"><label class="fld" for="cfg_diaFecho">Dia em que a empresa fecha as horas do mês (vazio = fim do mês)</label>
+          <input type="number" step="1" min="0" max="28" inputmode="numeric" id="cfg_diaFecho" placeholder="fim do mês"></div>
         <div class="fld-wrap"><label class="fld" for="cfg_periodoNoite">Período noturno (admitidos até 2015: 20:00 – 07:00)</label>
           <input type="text" inputmode="numeric" id="cfg_periodoNoite" placeholder="20:00 – 07:00"></div>
       </div>
@@ -1320,6 +1323,7 @@ function recarregarCampos(){
   const ta = $('cfg_taxasAuto'); if (ta) ta.checked = !!cfg.taxasAuto;
   const ra = $('cfg_refeicaoAuto'); if (ra) ra.checked = !!cfg.refeicaoAuto;
   const acn = $('cfg_acn'); if (acn) acn.checked = !!cfg.acn;
+  const df = $('cfg_diaFecho'); if (df) df.value = cfg.diaFecho || '';
   const ia = $('cfg_irsAuto'); if (ia){ ia.checked = !!cfg.irsAuto; $('cfg_irs').readOnly = !!cfg.irsAuto; }
   const it = $('cfg_irsTabela'); if (it) it.value = cfg.irsTabela || 'I';
   const idp = $('cfg_dependentes'); if (idp) idp.value = cfg.dependentes || 0;
@@ -1605,6 +1609,14 @@ function montarDefinicoes(){
   ia.addEventListener('change', () => { cfg.irsAuto = ia.checked; $('cfg_irs').readOnly = ia.checked; gravarCfg(); pintarMes(); });
   it.addEventListener('change', () => { cfg.irsTabela = it.value; gravarCfg(); pintarMes(); });
   idp.addEventListener('change', () => { cfg.dependentes = Math.max(0, parseInt(idp.value, 10) || 0); idp.value = cfg.dependentes; gravarCfg(); pintarMes(); });
+  const df = $('cfg_diaFecho');
+  df.value = cfg.diaFecho || '';
+  df.addEventListener('change', () => {
+    const v = Math.min(28, Math.max(0, parseInt(df.value, 10) || 0));
+    cfg.diaFecho = v; df.value = v || '';
+    gravarCfg(); pintarMes();
+    toast(v ? `Cada mês passa a contar do dia ${v+1} ao dia ${v}` : 'Cada mês passa a contar do dia 1 ao fim do mês');
+  });
   const acn = $('cfg_acn');
   acn.checked = !!cfg.acn;
   acn.addEventListener('change', () => { cfg.acn = acn.checked; gravarCfg(); recalcular(); pintarMes(); });
@@ -1957,7 +1969,7 @@ function reducaoDescanso(mes){
     porDia[r.data] = x ? {ini: Math.min(x.ini, h.ini), fim: Math.max(x.fim, h.fim)} : h;
   });
   let falta = 0;
-  Object.keys(porDia).filter(d => d.startsWith(mes)).forEach(d => {
+  Object.keys(porDia).filter(d => noPeriodo(d, mes)).forEach(d => {
     const ant = new Date(d + 'T12:00:00'); ant.setDate(ant.getDate() - 1);
     const da = `${ant.getFullYear()}-${String(ant.getMonth()+1).padStart(2,'0')}-${String(ant.getDate()).padStart(2,'0')}`;
     if (!porDia[da]) return;
@@ -2326,6 +2338,16 @@ async function registar(){
   if (tabMes) tabMes.click();
   toast(`Chapa ${atual.chapa} registada, ${eur(d.total)}`);
 }
+/* Período das horas variáveis de um "mês": se a empresa fecha num dia X, o mês de
+   setembro vai do dia X+1 de agosto ao dia X de setembro; sem dia de fecho, é o mês do calendário. */
+function periodoDoMes(ms){
+  const [a,m] = ms.split('-').map(Number);
+  const f = Math.min(28, Math.max(0, parseInt(cfg.diaFecho, 10) || 0));
+  if (!f) return {ini: `${ms}-01`, fim: `${ms}-31`, fecho: 0};
+  const ini = isoLocal(new Date(a, m-2, f+1)), fim = isoLocal(new Date(a, m-1, f));
+  return {ini, fim, fecho: f};
+}
+const noPeriodo = (data, ms) => { const p = periodoDoMes(ms); return data >= p.ini && data <= p.fim; };
 /* um dia apagado à mão não volta a ser registado sozinho a partir da escala */
 function marcarEscalaIgnorada(datas){
   let mudou = false;
@@ -2405,8 +2427,11 @@ function pintarMes(){
   const [a,m] = mesSel.split('-').map(Number);
   const nomeMes = new Date(a, m-1, 1).toLocaleDateString('pt-PT', {month:'long', year:'numeric'});
   $('mesNome').textContent = nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1);
+  const per = periodoDoMes(mesSel), dm = iso => iso.slice(8,10) + '/' + iso.slice(5,7);
+  $('mesPeriodo').textContent = per.fecho ? `De ${dm(per.ini)} a ${dm(per.fim)} (a empresa fecha as horas ao dia ${per.fecho})` : '';
+  $('mesPeriodo').hidden = !per.fecho;
 
-  const doMes = registos.filter(r => r.data.startsWith(mesSel)).sort((x,y) => x.data.localeCompare(y.data));
+  const doMes = registos.filter(r => noPeriodo(r.data, mesSel)).sort((x,y) => x.data.localeCompare(y.data));
   const dias = new Set(doMes.map(r => r.data)).size;
   const min  = doMes.reduce((s,r) => s + r.minutos, 0);
   const noi  = doMes.reduce((s,r) => s + (r.noite||0), 0);
@@ -2506,7 +2531,7 @@ function pintarRecibo(doMes, red){
     `<p class="note">Quantidades em horas decimais, como aparecem no recibo.</p></details>`;
 }
 function copiarResumo(){
-  const doMes = registos.filter(r => r.data.startsWith(mesSel)).sort((x,y)=>x.data.localeCompare(y.data));
+  const doMes = registos.filter(r => noPeriodo(r.data, mesSel)).sort((x,y)=>x.data.localeCompare(y.data));
   if (!doMes.length){ toast('Não há nada para copiar'); return; }
   const linhas = ['Data;Chapa;Servico;Acima 8h;Noturnas;Rubrica;Valor'];
   doMes.forEach(r => linhas.push([r.data, r.chapa, hm(r.minutos), hm(r.minExtra||0), hm(r.noite||0),
@@ -2786,11 +2811,11 @@ function confirmar(msg, sim, soInfo){
   $('mesNext').addEventListener('click', () => mudarMes(1));
   $('btnCopiar').addEventListener('click', copiarResumo);
   $('btnLimpar').addEventListener('click', async () => {
-    const n = registos.filter(r => r.data.startsWith(mesSel)).length;
+    const n = registos.filter(r => noPeriodo(r.data, mesSel)).length;
     if (!n){ toast('Este mês está vazio'); return; }
     if (await confirmar(`Apagar os ${n} registo(s) de ${$('mesNome').textContent}?`)){
-      marcarEscalaIgnorada(registos.filter(r => r.data.startsWith(mesSel)).map(r => r.data));
-      registos = registos.filter(r => !r.data.startsWith(mesSel));
+      marcarEscalaIgnorada(registos.filter(r => noPeriodo(r.data, mesSel)).map(r => r.data));
+      registos = registos.filter(r => !noPeriodo(r.data, mesSel));
       gravarReg(); pintarMes(); toast('Mês limpo');
     }
   });
