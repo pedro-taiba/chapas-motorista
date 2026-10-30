@@ -2529,7 +2529,19 @@ function fallbackCopiar(txt){
 
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')){
   if (!/claude|claudeusercontent/.test(location.hostname))
-    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    window.addEventListener('load', () => {
+      // procura versão nova ao abrir e sempre que a app volta ao ecrã; quando chega, recarrega sozinha
+      navigator.serviceWorker.register('sw.js', {updateViaCache: 'none'}).then(reg => {
+        const ver = () => reg.update().catch(() => {});
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) ver(); });
+        setInterval(ver, 30 * 60 * 1000);
+      }).catch(() => {});
+      let recarregou = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (recarregou) return; recarregou = true;
+        if (!document.querySelector('.dlg-fundo:not([hidden])')) location.reload();
+      });
+    });
 }
 
 

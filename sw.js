@@ -1,5 +1,5 @@
 /* Guarda a app no telemóvel para abrir sem rede. */
-const CACHE = 'chapas-colegas-v16';
+const CACHE = 'chapas-colegas-v17';
 const FICHEIROS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable.png'];
 
 self.addEventListener('install', e => {
@@ -18,7 +18,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, {cache: 'no-store'})
       .then(r => {
         const copia = r.clone();
         caches.open(CACHE).then(c => c.put(e.request, copia)).catch(() => {});
